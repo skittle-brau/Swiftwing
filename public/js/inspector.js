@@ -1,0 +1,240 @@
+/**
+ * Right-hand properties panel: block props for the selected block, or the
+ * document-wide email settings when nothing is selected.
+ */
+import { BLOCK_TYPES, FONT_STACKS, SOCIAL_NETWORKS, getPath, setPath } from '/shared/blocks.js';
+import { color as normColor } from '/shared/render.js';
+import { datedProjectDir } from '/shared/paths.js';
+import { store } from './store.js';
+import { media } from './media.js';
+import { fitImageWidth } from './canvas.js';
+import { $, h, ICONS } from './ui.js';
+
+let serverBaseUrl = '';
+export function setServerBaseUrl(url) {
+  serverBaseUrl = url;
+}
+
+const SETTINGS_FIELDS = [
+  { key: 'subject', label: 'Subject / title', type: 'text', help: 'Used for the HTML <title>.' },
+  { key: 'preheader', label: 'Preheader text', type: 'text', help: 'Hidden preview text shown after the subject in most inboxes.' },
+  { type: 'divider' },
+  { key: 'width', label: 'Email width', type: 'number', min: 320, max: 800, suffix: 'px' },
+  { key: 'fontFamily', label: 'Font family', type: 'select', options: FONT_STACKS.map((f) => [f.value, f.label]) },
+  { row: [
+    { key: 'fontSize', label: 'Body size', type: 'number', min: 10, max: 24, suffix: 'px' },
+    { key: 'lineHeight', label: 'Line height', type: 'number', min: 12, max: 40, suffix: 'px' },
+  ] },
+  { key: 'bodyBg', label: 'Page background', type: 'color' },
+  { key: 'contentBg', label: 'Content background', type: 'color' },
+  { key: 'textColor', label: 'Text colour', type: 'color' },
+  { key: 'headingColor', label: 'Heading colour', type: 'color' },
+  { key: 'linkColor', label: 'Link colour', type: 'color' },
+  { type: 'divider' },
+  {
+    key: 'assetBaseUrl',
+    label: 'Asset base URL',
+    type: 'url',
+    help: 'Prefix for uploaded images in the exported HTML. Must be publicly reachable by recipients. Leave blank to use this server.',
+  },
+  {
+    key: 'strictXhtml',
+    label: 'Strict XHTML 1.0 Transitional',
+    type: 'checkbox',
+    help: 'Omits role="presentation" and VML namespaces, which the XHTML 1.0 DTD does not define.',
+  },
+];
+
+/* ------------------------------------------------------------ field kinds */
+
+function wrap(field, control) {
+  return h(
+    'div',
+    { class: 'app-field' },
+    field.type === 'checkbox' ? null : h('label', { for: `f-${field.key}` }, field.label),
+    control,
+    field.help ? h('small', {}, field.help) : null,
+  );
+}
+
+function controlFor(field, value, commit) {
+  const id = `f-${field.key}`;
+  switch (field.type) {
+    case 'number': {
+      const input = h('input', { id, class: 'app-input', type: 'number', min: field.min, max: field.max, step: 1 });
+      input.value = value ?? 0;
+      input.addEventListener('input', () => input.value !== '' && commit(Number(input.value)));
+      return h('div', { class: 'app-input-suffix', 'data-suffix': field.suffix || '' }, input);
+    }
+    case 'select': {
+      const sel = h('select', { id }, field.options.map(([v, l]) => h('option', { value: v }, l)));
+      sel.value = value;
+      sel.addEventListener('change', () => commit(sel.value));
+      return sel;
+    }
+    case 'checkbox': {
+      const cb = h('input', { id, type: 'checkbox' });
+      cb.checked = !!value;
+      cb.addEventListener('change', () => commit(cb.checked));
+      return h('label', { class: 'app-checkbox', for: id }, cb, field.label);
+    }
+    case 'color': {
+      const hex = normColor(value);
+      const picker = h('input', { type: 'color', 'aria-label': field.label });
+      picker.value = hex || '#ffffff';
+      const text = h('input', { id, class: 'app-input', type: 'text', placeholder: field.allowEmpty ? 'None' : '#000000', maxlength: 7, spellcheck: 'false' });
+      text.value = hex;
+      picker.addEventListener('input', () => {
+        text.value = picker.value;
+        commit(picker.value);
+      });
+      text.addEventListener('input', () => {
+        const v = normColor(text.value);
+        if (v) {
+          picker.value = v;
+          commit(v);
+        } else if (!text.value && field.allowEmpty) commit('');
+      });
+      const clear = field.allowEmpty
+        ? h('button', { type: 'button', class: 'app-icon-btn', title: 'Clear', 'aria-label': 'Clear colour', html: ICONS.x, onclick: () => { text.value = ''; commit(''); } })
+        : null;
+      return h('div', { class: 'app-color' }, picker, text, clear);
+    }
+    case 'code': {
+      const ta = h('textarea', { id, spellcheck: 'false' });
+      ta.value = value ?? '';
+      ta.addEventListener('input', () => commit(ta.value));
+      return ta;
+    }
+    case 'image': {
+      const thumb = h('div', { class: 'app-image-thumb' }, value ? '' : 'No image');
+      if (value) thumb.style.backgroundImage = `url("${value.replace(/["\\\n]/g, encodeURIComponent)}")`;
+      const url = h('input', { id, class: 'app-input', type: 'text', placeholder: 'https://… or choose from library' });
+      url.value = value || '';
+      url.addEventListener('change', () => commit(url.value.trim(), { rerenderInspector: true }));
+      const choose = h('button', {
+        type: 'button',
+        class: 'app-btn app-btn-sm',
+        onclick: async () => {
+          const f = await media.pick();
+          if (f) commit(f.url, { rerenderInspector: true, image: f });
+        },
+      }, 'Choose / upload…');
+      const remove = value
+        ? h('button', { type: 'button', class: 'app-btn app-btn-sm app-btn-danger', onclick: () => commit('', { rerenderInspector: true }) }, 'Remove')
+        : null;
+      return h('div', { class: 'app-image-field' }, thumb, h('div', { class: 'app-image-buttons' }, choose, remove), url);
+    }
+    case 'social':
+      return socialEditor(value || [], commit);
+    case 'url':
+    case 'text':
+    default: {
+      const input = h('input', { id, class: 'app-input', type: 'text', spellcheck: field.type === 'url' ? 'false' : 'true' });
+      if (field.type === 'url') input.placeholder = field.key === 'assetBaseUrl' ? serverBaseUrl || 'https://' : 'https://';
+      input.value = value ?? '';
+      input.addEventListener('input', () => commit(input.value));
+      return input;
+    }
+  }
+}
+
+function socialEditor(items, commit) {
+  const listEl = h('div', { class: 'app-social-list' });
+  const draw = () => {
+    listEl.replaceChildren(
+      ...items.map((item, i) => {
+        const sel = h('select', { 'aria-label': 'Network' }, Object.entries(SOCIAL_NETWORKS).map(([k, n]) => h('option', { value: k }, n.label)));
+        sel.value = item.network;
+        sel.addEventListener('change', () => { items[i] = { ...items[i], network: sel.value }; commit([...items]); });
+        const del = h('button', { type: 'button', class: 'app-icon-btn', title: 'Remove', 'aria-label': 'Remove link', html: ICONS.trash, onclick: () => { items.splice(i, 1); commit([...items], { rerenderInspector: true }); } });
+        const url = h('input', { class: 'app-input', type: 'text', placeholder: 'https://', 'aria-label': 'Link URL' });
+        url.value = item.url || '';
+        url.addEventListener('input', () => { items[i] = { ...items[i], url: url.value }; commit([...items]); });
+        const icon = h('input', { class: 'app-input', type: 'text', placeholder: 'Custom icon URL (optional, PNG)', 'aria-label': 'Icon URL' });
+        icon.value = item.iconSrc || '';
+        icon.addEventListener('input', () => { items[i] = { ...items[i], iconSrc: icon.value.trim() }; commit([...items]); });
+        return h('div', { class: 'app-social-item' }, sel, del, url, icon);
+      }),
+      h('button', {
+        type: 'button',
+        class: 'app-btn app-btn-sm',
+        onclick: () => { items.push({ network: 'website', url: 'https://', iconSrc: '' }); commit([...items], { rerenderInspector: true }); },
+      }, '+ Add link'),
+    );
+  };
+  items = items.map((i) => ({ ...i }));
+  draw();
+  return listEl;
+}
+
+/* ----------------------------------------------------------------- render */
+
+function renderFields(form, fields, getValue, onCommit) {
+  for (const field of fields) {
+    if (field.type === 'divider') {
+      form.append(h('div', { class: 'app-divider' }));
+      continue;
+    }
+    if (field.row) {
+      const row = h('div', { class: 'app-row2' });
+      renderFields(row, field.row, getValue, onCommit);
+      form.append(row);
+      continue;
+    }
+    const commit = (v, extra = {}) => onCommit(field, v, extra);
+    form.append(wrap(field, controlFor(field, getValue(field.key), commit)));
+  }
+}
+
+export function renderInspector() {
+  const form = $('#inspector-form');
+  const block = store.selectedId ? store.getBlock(store.selectedId) : null;
+  form.replaceChildren();
+
+  if (!block) {
+    $('#inspector-title').textContent = 'Email settings';
+    $('#inspector-back').hidden = true;
+    const s = store.doc.settings;
+    renderFields(
+      form,
+      SETTINGS_FIELDS,
+      (k) => s[k],
+      (field, v) => store.update((doc) => { doc.settings[field.key] = v; }, { render: 'all', coalesce: `settings:${field.key}`, source: 'inspector' }),
+    );
+    form.append(
+      h('div', { class: 'app-info', html: `Images for this project upload to<br><code>uploads/${datedProjectDir(s.projectName)}/</code>` }),
+    );
+    return;
+  }
+
+  const def = BLOCK_TYPES[block.type];
+  $('#inspector-title').textContent = def.label;
+  $('#inspector-back').hidden = false;
+  renderFields(
+    form,
+    def.fields,
+    (k) => getPath(block.props, k),
+    (field, v, extra) => {
+      store.update((doc) => {
+        const b = doc.blocks.find((x) => x.id === block.id);
+        if (b) setPath(b.props, field.key, v);
+      }, { render: 'block', id: block.id, coalesce: `${block.id}:${field.key}`, source: 'inspector' });
+      if (block.type === 'image' && field.key === 'src' && v) fitImageWidth(block.id);
+      if (extra.rerenderInspector) renderInspector();
+    },
+  );
+  if (['text', 'header', 'footer', 'columns2'].includes(block.type)) {
+    form.prepend(h('div', { class: 'app-info' }, 'Click the text in the canvas to edit it with the rich-text toolbar.'));
+  }
+}
+
+export function initInspector() {
+  $('#inspector-back').addEventListener('click', () => store.select(null));
+  store.subscribe((evt, opts) => {
+    if (evt === 'select') renderInspector();
+    // Refresh after undo/redo/structural changes, but not while the user is typing in the inspector.
+    else if (evt === 'change' && opts.source !== 'inspector' && opts.render !== 'none') renderInspector();
+  });
+  renderInspector();
+}

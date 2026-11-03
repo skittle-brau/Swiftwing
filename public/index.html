@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Atelier Email Builder</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231a3a5c'/%3E%3Cpath d='M7 10h18v12H7z' fill='none' stroke='%23fff' stroke-width='2'/%3E%3Cpath d='M7 10l9 7 9-7' fill='none' stroke='%23fff' stroke-width='2'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/css/app.css" />
+  <style id="email-css"></style>
+</head>
+<body>
+  <header class="app-topbar">
+    <div class="app-brand">
+      <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"><rect width="32" height="32" rx="7" fill="currentColor"/><path d="M7 10h18v12H7z" fill="none" stroke="#fff" stroke-width="2"/><path d="M7 10l9 7 9-7" fill="none" stroke="#fff" stroke-width="2"/></svg>
+      <span>Atelier</span>
+    </div>
+    <label class="app-project">
+      <span class="app-visually-hidden">Project name</span>
+      <input id="project-name" type="text" spellcheck="false" autocomplete="off" placeholder="Project name" />
+    </label>
+
+    <div class="app-segmented" role="tablist" aria-label="View mode">
+      <button role="tab" data-view="visual" aria-selected="true">Visual editor</button>
+      <button role="tab" data-view="source" aria-selected="false">HTML source</button>
+      <button role="tab" data-view="preview" aria-selected="false">Preview</button>
+    </div>
+
+    <div class="app-topbar-actions">
+      <button class="app-icon-btn" id="btn-undo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
+      <button class="app-icon-btn" id="btn-redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
+      <div class="app-menu">
+        <button class="app-btn app-btn-ghost" id="btn-menu" aria-haspopup="true" aria-expanded="false">File ▾</button>
+        <div class="app-menu-list" id="file-menu" hidden>
+          <button data-file="new">New email</button>
+          <button data-file="open">Open design (.json)…</button>
+          <button data-file="save">Save design (.json)</button>
+        </div>
+      </div>
+      <button class="app-btn" id="btn-copy"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy HTML</button>
+      <button class="app-btn app-btn-primary" id="btn-download"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Download .html</button>
+    </div>
+    <input type="file" id="open-json" accept="application/json,.json" hidden />
+  </header>
+
+  <main class="app-main">
+    <!-- Left: palette + media -->
+    <aside class="app-sidebar" aria-label="Building blocks and media">
+      <div class="app-tabs" role="tablist">
+        <button role="tab" data-tab="blocks" aria-selected="true">Blocks</button>
+        <button role="tab" data-tab="media" aria-selected="false">Media</button>
+      </div>
+      <section class="app-tabpanel" data-panel="blocks">
+        <h3 class="app-section-title">Layouts</h3>
+        <div class="app-palette" data-group="layout"></div>
+        <h3 class="app-section-title">Content</h3>
+        <div class="app-palette" data-group="content"></div>
+        <p class="app-hint">Drag blocks onto the canvas, or click to append.</p>
+      </section>
+      <section class="app-tabpanel" data-panel="media" hidden>
+        <label class="app-dropzone" id="media-dropzone">
+          <input type="file" id="media-input" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden />
+          <svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>
+          <strong>Drop images or click to upload</strong>
+          <small>Saved to <code id="media-target-path">YYYY/MM/Project</code></small>
+        </label>
+        <div class="app-media-filter">
+          <label><input type="radio" name="media-scope" value="project" checked /> This project</label>
+          <label><input type="radio" name="media-scope" value="all" /> All projects</label>
+        </div>
+        <div class="app-media-grid" id="media-grid"></div>
+        <p class="app-hint">Drag an image onto the canvas to add an Image block.</p>
+      </section>
+    </aside>
+
+    <!-- Centre: stage -->
+    <section class="app-stage">
+      <div class="app-view" data-view-panel="visual">
+        <div class="app-rte-toolbar" id="rte-toolbar"><span class="app-rte-placeholder">Click any text in the email to edit it.</span></div>
+        <div class="app-canvas-scroll" id="canvas-scroll">
+          <div class="app-canvas-bg" id="canvas-bg">
+            <div class="app-email" id="canvas">
+              <div class="app-canvas-list" id="canvas-list"></div>
+              <div class="app-canvas-empty" id="canvas-empty" hidden>
+                <strong>Your email is empty</strong>
+                <span>Drag a layout from the left to get started.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="app-view" data-view-panel="source" hidden>
+        <div class="app-source-bar">
+          <div class="app-source-meta" id="source-meta">Generating…</div>
+          <div class="app-source-actions">
+            <label class="app-check"><input type="checkbox" id="source-wrap" /> Wrap lines</label>
+            <button class="app-btn" data-action="copy">Copy HTML</button>
+            <button class="app-btn" data-action="download">Download .html</button>
+          </div>
+        </div>
+        <ul class="app-warnings" id="source-warnings" hidden></ul>
+        <pre class="app-code" id="source-code"><code></code></pre>
+      </div>
+
+      <div class="app-view" data-view-panel="preview" hidden>
+        <div class="app-source-bar">
+          <div class="app-segmented app-segmented-sm" role="tablist" aria-label="Preview device">
+            <button data-device="desktop" aria-selected="true">Desktop</button>
+            <button data-device="mobile" aria-selected="false">Mobile (375px)</button>
+          </div>
+          <div class="app-source-meta">Rendered from the exported, CSS-inlined HTML.</div>
+        </div>
+        <div class="app-preview-wrap">
+          <iframe id="preview-frame" title="Email preview" sandbox="allow-popups allow-popups-to-escape-sandbox"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right: inspector -->
+    <aside class="app-inspector" aria-label="Properties">
+      <div class="app-inspector-head">
+        <h2 id="inspector-title">Email settings</h2>
+        <button class="app-link-btn" id="inspector-back" hidden>← Email settings</button>
+      </div>
+      <form class="app-form" id="inspector-form" autocomplete="off" onsubmit="return false"></form>
+    </aside>
+  </main>
+
+  <!-- Media picker modal -->
+  <div class="app-modal" id="picker" hidden>
+    <div class="app-modal-backdrop" data-close></div>
+    <div class="app-modal-card" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+      <header>
+        <h2 id="picker-title">Choose an image</h2>
+        <button class="app-icon-btn" data-close aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </header>
+      <div class="app-modal-body">
+        <label class="app-dropzone app-dropzone-sm" id="picker-dropzone">
+          <input type="file" id="picker-input" accept="image/png,image/jpeg,image/gif,image/webp" multiple hidden />
+          <strong>Upload new image</strong>
+          <small>or drop files here · saved to <code class="js-target-path"></code></small>
+        </label>
+        <div class="app-media-grid app-media-grid-lg" id="picker-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="app-toasts" id="toasts" aria-live="polite"></div>
+
+  <script src="/vendor/tinymce/tinymce.min.js" referrerpolicy="origin"></script>
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>
