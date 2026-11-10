@@ -23,6 +23,25 @@ To configure the server, copy `.env.example` to `.env`:
 | `MAX_IMAGE_WIDTH` | `1200`       | Uploaded images wider than this are downscaled |
 | `JPEG_QUALITY`    | `82`         | JPEG compression quality (1–100) |
 
+### Debian / LXC (systemd)
+
+`deploy/install-debian.sh` installs or updates the app on Debian 12/13. Run it as root:
+
+```bash
+bash deploy/install-debian.sh
+```
+
+Optionally pass `PUBLIC_BASE_URL=https://…` to set the public address, and `CADDY_IP=…` to allow only your reverse proxy to reach the app port. Re-run the script to update: it does a fast-forward `git pull`, reinstalls packages and restarts the service, and keeps your settings and uploads.
+
+| Path | Purpose |
+|---|---|
+| `/opt/atelier-email-builder` | App code (git checkout) |
+| `/etc/atelier-email-builder/env` | Settings (`PORT`, `HOST`, `UPLOAD_DIR`, `PUBLIC_BASE_URL`, …) |
+| `/var/lib/atelier-email-builder/uploads` | Uploaded images. Back this up |
+| `atelier-email-builder.service` | systemd unit, running as the `atelier` user |
+
+After editing the settings file, run `systemctl restart atelier-email-builder`.
+
 ### Docker
 
 ```bash
