@@ -322,6 +322,32 @@ const renderers = {
     );
   },
 
+  video(b, ctx) {
+    const p = b.props;
+    const px = num(p.paddingX, 0, 80, 30);
+    const py = num(p.paddingY, 0, 80, 16);
+    const a = pick(p.align, ['left', 'center', 'right'], 'center');
+    const bg = color(p.bgColor);
+    const inner = ctx.settings.width - px * 2;
+    const w = p.width ? Math.min(num(p.width, 1, 800, inner), inner) : inner;
+    const title = String(p.title || '').trim();
+    let content = '';
+    if (p.thumbnailSrc) {
+      content = imgTag({ src: p.thumbnailSrc, alt: title ? `Play video: ${title}` : 'Play video', width: w, href: p.url, align: a }, ctx);
+    } else if (ctx.editable) {
+      content =
+        `<div class="app-img-placeholder app-video-placeholder" style="height:${Math.round((w * 9) / 16)}px;">` +
+        `<span>Video</span><small>Paste a YouTube or Vimeo link in the panel on the right</small></div>`;
+    }
+    if (!content) return '';
+    return rowTable(
+      b,
+      ctx,
+      `<td${px ? ' class="ae-pad"' : ''} align="${a}" valign="top" style="${padStyle(px, py)}font-size:0;line-height:0;">${content}</td>`,
+      { bg },
+    );
+  },
+
   button(b, ctx) {
     const p = b.props;
     const s = ctx.settings;

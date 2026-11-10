@@ -10,7 +10,9 @@
 #   /opt/atelier-email-builder             app code (git checkout, owned by root)
 #   /etc/atelier-email-builder/env         settings (EnvironmentFile for systemd)
 #   /var/lib/atelier-email-builder/uploads uploaded images
+#   /var/lib/atelier-email-builder/atelier.db  accounts, sessions, templates (SQLite)
 #   atelier-email-builder.service          runs as the "atelier" system user
+#   /usr/local/bin/atelier-user            account management (run as root)
 #
 # Optional variables:
 #   PUBLIC_BASE_URL  public HTTPS address of the site (written to the settings file)
@@ -37,8 +39,8 @@ echo "==> Installing base packages"
 apt-get update -q
 apt-get install -y -q curl ca-certificates git
 
-echo "==> Checking Node.js (22.9 or newer)"
-if ! command -v node >/dev/null || ! node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a===22&&b>=9)?0:1)'; then
+echo "==> Checking Node.js (22.13 or newer)"
+if ! command -v node >/dev/null || ! node -e 'const [a,b]=process.versions.node.split(".").map(Number);process.exit(a>22||(a===22&&b>=13)?0:1)'; then
   curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
   apt-get install -y -q nodejs
 fi
@@ -113,6 +115,17 @@ systemctl daemon-reload
 systemctl enable -q "$SERVICE"
 systemctl restart "$SERVICE"
 
+echo "==> Account tool (/usr/local/bin/atelier-user)"
+cat > /usr/local/bin/atelier-user <<EOF
+#!/bin/sh
+# Manage Atelier Email Builder accounts:
+#   atelier-user add <username> [--admin] | passwd <username> | role <username> admin|editor
+#   atelier-user unlock <username> | remove <username> | list
+set -a; . $ENV_FILE; set +a
+exec runuser -u $APP_USER -- /usr/bin/node $APP_DIR/server/cli.js user "\$@"
+EOF
+chmod 0755 /usr/local/bin/atelier-user
+
 if [ -n "${CADDY_IP:-}" ]; then
   echo "==> Restricting port $APP_PORT to $CADDY_IP"
   apt-get install -y -q nftables
@@ -134,6 +147,9 @@ echo "==> Checking health"
 for _ in $(seq 1 15); do
   if curl -fsS "http://127.0.0.1:$APP_PORT/api/health" >/dev/null 2>&1; then
     echo "OK: Atelier is running on port $APP_PORT"
+    if ! atelier-user list 2>/dev/null | grep -qv '^No accounts'; then
+      echo "NEXT: create the first admin account with: atelier-user add <your-username> --admin"
+    fi
     if ! grep -q '^PUBLIC_BASE_URL=.\+' "$ENV_FILE"; then
       echo "NOTE: PUBLIC_BASE_URL is empty in $ENV_FILE. Set it to your public https:// address and run: systemctl restart $SERVICE"
     fi

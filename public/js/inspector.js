@@ -8,7 +8,8 @@ import { datedProjectDir } from '/shared/paths.js';
 import { store } from './store.js';
 import { media } from './media.js';
 import { fitImageWidth } from './canvas.js';
-import { $, h, ICONS } from './ui.js';
+import { $, h, ICONS, toast } from './ui.js';
+import { api } from './api.js';
 
 let serverBaseUrl = '';
 export function setServerBaseUrl(url) {
@@ -127,6 +128,27 @@ function controlFor(field, value, commit) {
     }
     case 'social':
       return socialEditor(value || [], commit);
+    case 'video': {
+      const input = h('input', { id, class: 'app-input', type: 'url', placeholder: 'https://www.youtube.com/watch?v=…', spellcheck: 'false' });
+      input.value = value || '';
+      const status = h('small', { class: 'app-video-status', role: 'status' });
+      const setStatus = (msg, isError = false) => {
+        status.textContent = msg;
+        status.classList.toggle('is-error', isError);
+      };
+      let last = input.value.trim();
+      const go = (force = false) => {
+        const v = input.value.trim();
+        if (!v || (!force && v === last)) return;
+        last = v;
+        commit(v, { fetchVideo: true, setStatus, button });
+      };
+      const button = h('button', { type: 'button', class: 'app-btn app-btn-sm', onclick: () => go(true) }, value ? 'Refresh thumbnail' : 'Get thumbnail');
+      input.addEventListener('paste', () => setTimeout(() => go(), 0));
+      input.addEventListener('change', () => go());
+      input.addEventListener('keydown', (e) => e.key === 'Enter' && (e.preventDefault(), go(true)));
+      return h('div', { class: 'app-image-field' }, input, h('div', { class: 'app-image-buttons' }, button), status);
+    }
     case 'url':
     case 'text':
     default: {
@@ -187,6 +209,37 @@ function renderFields(form, fields, getValue, onCommit) {
   }
 }
 
+const autoTitles = new Map(); // blockId → title we filled in, so a user's own alt text isn't overwritten
+
+/** Ask the server for a play-button thumbnail and fill in the Video block. */
+async function fetchVideo(blockId, url, { setStatus = (m, e) => e && toast(m, { error: true }), button } = {}) {
+  const block = store.getBlock(blockId);
+  if (!block) return;
+  setStatus('Getting the video thumbnail…');
+  if (button) button.disabled = true;
+  try {
+    const res = await api.videoThumbnail(url, store.doc.settings.projectName, block.props.playStyle);
+    const cur = store.getBlock(blockId);
+    if (!cur) return;
+    const keepTitle = cur.props.title && cur.props.title !== autoTitles.get(blockId);
+    store.update((doc) => {
+      const b = doc.blocks.find((x) => x.id === blockId);
+      if (!b) return;
+      b.props.url = res.url;
+      b.props.thumbnailSrc = res.thumbnail.url;
+      if (!keepTitle) b.props.title = res.title;
+    }, { render: 'block', id: blockId });
+    if (!keepTitle) autoTitles.set(blockId, res.title);
+    media.refresh();
+    if (store.selectedId === blockId) renderInspector();
+    toast(`${res.provider === 'youtube' ? 'YouTube' : 'Vimeo'} thumbnail added${res.title ? `: ${res.title}` : ''}`);
+  } catch (err) {
+    setStatus(err.message, true);
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 export function renderInspector() {
   const form = $('#inspector-form');
   const block = store.selectedId ? store.getBlock(store.selectedId) : null;
@@ -216,11 +269,15 @@ export function renderInspector() {
     def.fields,
     (k) => getPath(block.props, k),
     (field, v, extra) => {
+      // A pasted video link is only saved once its thumbnail has been fetched,
+      // so a bad link never replaces a working one.
+      if (extra.fetchVideo) return void fetchVideo(block.id, v, extra);
       store.update((doc) => {
         const b = doc.blocks.find((x) => x.id === block.id);
         if (b) setPath(b.props, field.key, v);
       }, { render: 'block', id: block.id, coalesce: `${block.id}:${field.key}`, source: 'inspector' });
       if (block.type === 'image' && field.key === 'src' && v) fitImageWidth(block.id);
+      if (block.type === 'video' && field.key === 'playStyle' && block.props.url) fetchVideo(block.id, block.props.url, {});
       if (extra.rerenderInspector) renderInspector();
     },
   );

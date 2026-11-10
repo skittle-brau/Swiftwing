@@ -93,12 +93,9 @@ export function createUploader() {
  */
 export async function storeUpload(uploadRoot, file, { project, date = new Date(), maxWidth, jpegQuality } = {}) {
   const img = await optimizeImage(file.buffer, { maxWidth, jpegQuality });
-  const relDir = datedProjectDir(project, date);
-  const absDir = path.join(uploadRoot, relDir);
-  await fs.mkdir(absDir, { recursive: true });
-  const absPath = await writeUnique(absDir, sanitizeFileName(file.originalname, img.mime), img.buffer);
+  const stored = await storeBuffer(uploadRoot, img.buffer, sanitizeFileName(file.originalname, img.mime), { project, date });
   return {
-    ...describeFile(uploadRoot, absPath, await fs.stat(absPath)),
+    ...stored,
     width: img.width,
     height: img.height,
     optimized: {
@@ -109,6 +106,14 @@ export async function storeUpload(uploadRoot, file, { project, date = new Date()
       originalBytes: img.original.bytes,
     },
   };
+}
+
+/** Save already-processed image bytes under YYYY/MM/<Project>/ with a unique name. */
+export async function storeBuffer(uploadRoot, buffer, fileName, { project, date = new Date() } = {}) {
+  const absDir = path.join(uploadRoot, datedProjectDir(project, date));
+  await fs.mkdir(absDir, { recursive: true });
+  const absPath = await writeUnique(absDir, fileName, buffer);
+  return describeFile(uploadRoot, absPath, await fs.stat(absPath));
 }
 
 export function describeFile(uploadRoot, absPath, stat) {

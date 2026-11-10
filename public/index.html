@@ -29,6 +29,9 @@
       <button class="app-icon-btn" id="btn-undo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
       <button class="app-icon-btn" id="btn-redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></svg></button>
       <div class="app-menu">
+        <button class="app-btn app-btn-ghost" id="btn-templates" type="button">Templates ▾</button>
+      </div>
+      <div class="app-menu">
         <button class="app-btn app-btn-ghost" id="btn-menu" aria-haspopup="true" aria-expanded="false">File ▾</button>
         <div class="app-menu-list" id="file-menu" hidden>
           <button data-file="new">New email</button>
@@ -38,6 +41,9 @@
       </div>
       <button class="app-btn" id="btn-copy"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Copy HTML</button>
       <button class="app-btn app-btn-primary" id="btn-download"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>Download .html</button>
+      <div class="app-menu">
+        <button class="app-btn app-btn-ghost app-user-btn" id="btn-user" type="button">Account ▾</button>
+      </div>
     </div>
     <input type="file" id="open-json" accept="application/json,.json" hidden />
   </header>
