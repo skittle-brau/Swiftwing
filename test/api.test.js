@@ -4,6 +4,7 @@ import { mkdtempSync, rmSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { createApp } from '../server/app.js';
+import sharp from 'sharp';
 import { createDocument } from '../shared/blocks.js';
 
 // 1×1 transparent PNG
@@ -21,9 +22,9 @@ after(() => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-async function upload(name, type, project = 'Spring Gala') {
+async function upload(name, type, project = 'Spring Gala', body = PNG) {
   const fd = new FormData();
-  fd.append('files', new Blob([PNG], { type }), name);
+  fd.append('files', new Blob([body], { type }), name);
   return fetch(`${base}/api/uploads?project=${encodeURIComponent(project)}`, { method: 'POST', body: fd });
 }
 
@@ -46,6 +47,31 @@ test('uploads land in YYYY/MM/ProjectName and are served back', async () => {
 test('rejects non-image uploads', async () => {
   const res = await upload('evil.html', 'text/html');
   assert.equal(res.status, 415);
+});
+
+test('rejects a non-image disguised with an image MIME type', async () => {
+  const res = await upload('evil.png', 'image/png', 'Spring Gala', Buffer.from('<?php echo 1; ?>'));
+  assert.equal(res.status, 415);
+  assert.match((await res.json()).error, /evil\.png: The file is not a readable image/);
+});
+
+test('downscales large photos to 1200px and converts WebP for Outlook', async () => {
+  const photo = await sharp({ create: { width: 4000, height: 3000, channels: 3, background: '#336699' } }).webp().toBuffer();
+  const res = await upload('Big Photo.webp', 'image/webp', 'Spring Gala', photo);
+  assert.equal(res.status, 201);
+  const { files, maxWidth } = await res.json();
+  assert.equal(maxWidth, 1200);
+  const [f] = files;
+  assert.equal(f.name, 'big-photo.jpg');
+  assert.equal(f.width, 1200);
+  assert.equal(f.height, 900);
+  assert.deepEqual(
+    { resized: f.optimized.resized, converted: f.optimized.converted, from: f.optimized.originalWidth },
+    { resized: true, converted: true, from: 4000 },
+  );
+  const stored = await sharp(path.join(dir, f.path)).metadata();
+  assert.equal(stored.format, 'jpeg');
+  assert.equal(stored.width, 1200);
 });
 
 test('lists and deletes uploads per project', async () => {
