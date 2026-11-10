@@ -20,6 +20,8 @@ To configure the server, copy `.env.example` to `.env`:
 | `PORT`            | `3000`       | HTTP port |
 | `UPLOAD_DIR`      | `./uploads`  | Root folder for uploaded images |
 | `PUBLIC_BASE_URL` | request origin | Public origin used to make `/uploads/...` image URLs absolute in exported HTML. **Set this in production** so that recipients can load images. |
+| `MAX_IMAGE_WIDTH` | `1200`       | Uploaded images wider than this are downscaled |
+| `JPEG_QUALITY`    | `82`         | JPEG compression quality (1–100) |
 
 ### Docker
 
@@ -60,7 +62,15 @@ TinyMCE is self-hosted from `node_modules`, so it needs no API key or CDN. It ru
   - drop a file onto any image placeholder
   - use **Choose / upload…** in the inspector
 - Files are stored as `uploads/<year>/<month>/<ProjectName>/<file>`, for example `uploads/2026/11/Spring-Newsletter/hero-banner.png`. The folder comes from the project name in the top bar and the upload date.
-- Project names and file names are sanitised. Path traversal is blocked, duplicate names are suffixed (`-1`, `-2`…), only PNG/JPEG/GIF/WebP are accepted, and files are limited to 10 MB.
+- Project names and file names are sanitised. Path traversal is blocked, duplicate names are suffixed (`-1`, `-2`…), and uploads are limited to 25 MB each, 10 at a time.
+- **Every upload is optimised before it is stored** ([sharp](https://sharp.pixelplumbing.com/)):
+  - Images wider than **1200 px** are downscaled (never upscaled). That's twice the 600 px email width, so images stay sharp on hi-DPI screens.
+  - JPEGs are re-compressed with mozjpeg, and PNGs are compressed losslessly.
+  - Phone photos are rotated upright from their EXIF orientation, which Outlook ignores. Metadata such as camera details and GPS location is removed.
+  - Colours are converted to sRGB.
+  - WebP is converted to JPEG, or to PNG if it has transparency, because Outlook desktop can't display WebP.
+  - Animated GIFs keep their animation.
+  - Files are checked by their actual content, not the type the browser claims. Only PNG, JPEG, GIF and WebP are accepted.
 - Drag a library image onto the canvas to insert it. Each library image also has buttons to insert it, copy its absolute URL, or delete it.
 
 ### Export engine (Synergetic / Outlook safe)

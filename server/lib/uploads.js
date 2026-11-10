@@ -4,12 +4,14 @@
  * Files are written to  <UPLOAD_DIR>/YYYY/MM/<ProjectName>/<file>
  * e.g.                  uploads/2026/11/SpringNewsletter/hero-banner.png
  * and served publicly at /uploads/YYYY/MM/<ProjectName>/<file>.
+ * Images are optimised (see images.js) before they are written.
  */
 import fs from 'node:fs/promises';
-import { existsSync, mkdirSync } from 'node:fs';
+import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import multer from 'multer';
 import { sanitizeProjectName, datedProjectDir } from '../../shared/paths.js';
+import { optimizeImage } from './images.js';
 
 export { sanitizeProjectName, datedProjectDir };
 
@@ -20,7 +22,9 @@ export const ALLOWED_TYPES = {
   'image/webp': ['.webp'],
 };
 const IMAGE_EXT = new Set(Object.values(ALLOWED_TYPES).flat());
-export const MAX_FILE_BYTES = 10 * 1024 * 1024;
+// Phone photos are often 5–15 MB; they are downscaled before being stored.
+export const MAX_FILE_BYTES = 25 * 1024 * 1024;
+export const MAX_FILES = 10;
 
 /** "My Photo (1).JPG" → "my-photo-1.jpg" */
 export function sanitizeFileName(original, mimetype) {
@@ -49,39 +53,29 @@ export function resolveInside(root, rel) {
   return target;
 }
 
-async function uniqueName(dir, fileName) {
+/**
+ * Write `buffer` as `fileName` in `dir`, adding -1, -2… if the name is taken.
+ * Uses exclusive create so two simultaneous uploads can never overwrite each other.
+ */
+async function writeUnique(dir, fileName, buffer) {
   const { name, ext } = path.parse(fileName);
-  let candidate = fileName;
-  for (let i = 1; existsSync(path.join(dir, candidate)); i++) candidate = `${name}-${i}${ext}`;
-  return candidate;
+  for (let i = 0; i < 1000; i++) {
+    const candidate = i ? `${name}-${i}${ext}` : fileName;
+    try {
+      await fs.writeFile(path.join(dir, candidate), buffer, { flag: 'wx' });
+      return path.join(dir, candidate);
+    } catch (err) {
+      if (err.code !== 'EEXIST') throw err;
+    }
+  }
+  throw new Error('Could not find a free file name.');
 }
 
-export function createUploader(uploadRoot, { now = () => new Date() } = {}) {
-  const storage = multer.diskStorage({
-    destination(req, _file, cb) {
-      try {
-        const rel = datedProjectDir(req.query.project ?? req.body?.project, now());
-        const abs = path.join(uploadRoot, rel);
-        mkdirSync(abs, { recursive: true });
-        req.uploadRelDir = rel;
-        cb(null, abs);
-      } catch (err) {
-        cb(err);
-      }
-    },
-    async filename(req, file, cb) {
-      try {
-        const dir = path.join(uploadRoot, req.uploadRelDir);
-        cb(null, await uniqueName(dir, sanitizeFileName(file.originalname, file.mimetype)));
-      } catch (err) {
-        cb(err);
-      }
-    },
-  });
-
+/** Multer middleware: keeps files in memory so they can be optimised before saving. */
+export function createUploader() {
   return multer({
-    storage,
-    limits: { fileSize: MAX_FILE_BYTES, files: 20 },
+    storage: multer.memoryStorage(),
+    limits: { fileSize: MAX_FILE_BYTES, files: MAX_FILES },
     fileFilter(_req, file, cb) {
       if (!ALLOWED_TYPES[file.mimetype]) {
         const err = new Error(`Unsupported file type "${file.mimetype}". Use PNG, JPG, GIF or WebP.`);
@@ -91,6 +85,30 @@ export function createUploader(uploadRoot, { now = () => new Date() } = {}) {
       cb(null, true);
     },
   });
+}
+
+/**
+ * Optimise one uploaded file and save it under YYYY/MM/<Project>/.
+ * @returns descriptor for the API, including what optimisation did.
+ */
+export async function storeUpload(uploadRoot, file, { project, date = new Date(), maxWidth, jpegQuality } = {}) {
+  const img = await optimizeImage(file.buffer, { maxWidth, jpegQuality });
+  const relDir = datedProjectDir(project, date);
+  const absDir = path.join(uploadRoot, relDir);
+  await fs.mkdir(absDir, { recursive: true });
+  const absPath = await writeUnique(absDir, sanitizeFileName(file.originalname, img.mime), img.buffer);
+  return {
+    ...describeFile(uploadRoot, absPath, await fs.stat(absPath)),
+    width: img.width,
+    height: img.height,
+    optimized: {
+      resized: img.resized,
+      converted: img.converted,
+      originalWidth: img.original.width,
+      originalFormat: img.original.format,
+      originalBytes: img.original.bytes,
+    },
+  };
 }
 
 export function describeFile(uploadRoot, absPath, stat) {

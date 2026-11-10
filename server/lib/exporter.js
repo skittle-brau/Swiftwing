@@ -109,6 +109,9 @@ export function lint(doc, html) {
   if (/\ssrc="\/(?!\/)/.test(html)) {
     warnings.push('Some image URLs are relative. Set "Asset base URL" in Email settings so images load in mail clients.');
   }
+  if (/\ssrc="[^"]*\.webp(?:[?#][^"]*)?"/i.test(html)) {
+    warnings.push('WebP images do not display in Outlook desktop. Re-upload them (they are converted automatically) or use PNG/JPG.');
+  }
   if (/\ssrc="http:\/\/(localhost|127\.0\.0\.1)/.test(html)) {
     warnings.push('Images point at localhost — recipients will not be able to load them. Set a public Asset base URL.');
   }

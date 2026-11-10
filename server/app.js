@@ -4,7 +4,13 @@ import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import multer from 'multer';
 import { exportEmail } from './lib/exporter.js';
-import { createUploader, describeFile, listUploads, resolveInside, ensureDir } from './lib/uploads.js';
+import { createUploader, storeUpload, listUploads, resolveInside, ensureDir, datedProjectDir, MAX_FILES } from './lib/uploads.js';
+import { DEFAULT_MAX_WIDTH, DEFAULT_JPEG_QUALITY } from './lib/images.js';
+
+function clampInt(v, min, max, fallback) {
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) && v !== '' && v != null ? Math.min(max, Math.max(min, n)) : fallback;
+}
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
@@ -13,6 +19,8 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
  * @param {string} [options.uploadDir]      where images are stored
  * @param {string} [options.publicBaseUrl]  absolute origin used for exported image URLs
  * @param {() => Date} [options.now]        clock (injectable for tests)
+ * @param {number} [options.maxImageWidth]  uploads wider than this are downscaled (default 1200)
+ * @param {number} [options.jpegQuality]    JPEG quality 1–100 (default 82)
  */
 export function createApp(options = {}) {
   const uploadDir = path.resolve(options.uploadDir || process.env.UPLOAD_DIR || path.join(ROOT, 'uploads'));
@@ -33,14 +41,28 @@ export function createApp(options = {}) {
     res.json({ publicBaseUrl: originOf(req), configuredBaseUrl: publicBaseUrl || null });
   });
 
-  const upload = createUploader(uploadDir, { now: options.now });
-  app.post('/api/uploads', upload.array('files', 20), async (req, res, next) => {
+  const now = options.now || (() => new Date());
+  const imageOptions = {
+    maxWidth: clampInt(options.maxImageWidth ?? process.env.MAX_IMAGE_WIDTH, 100, 4000, DEFAULT_MAX_WIDTH),
+    jpegQuality: clampInt(options.jpegQuality ?? process.env.JPEG_QUALITY, 1, 100, DEFAULT_JPEG_QUALITY),
+  };
+  const upload = createUploader();
+  app.post('/api/uploads', upload.array('files', MAX_FILES), async (req, res, next) => {
     try {
-      const files = await Promise.all(
-        (req.files || []).map(async (f) => describeFile(uploadDir, f.path, await fs.stat(f.path))),
-      );
-      if (!files.length) return res.status(400).json({ error: 'No files received (field name "files").' });
-      res.status(201).json({ files, directory: req.uploadRelDir });
+      if (!req.files?.length) return res.status(400).json({ error: 'No files received (field name "files").' });
+      const project = req.query.project ?? req.body?.project;
+      const date = now();
+      const files = [];
+      // One at a time keeps memory use flat when several large photos arrive together.
+      for (const f of req.files) {
+        try {
+          files.push(await storeUpload(uploadDir, f, { project, date, ...imageOptions }));
+        } catch (err) {
+          err.message = `${f.originalname}: ${err.message}`;
+          throw err;
+        }
+      }
+      res.status(201).json({ files, directory: datedProjectDir(project, date), maxWidth: imageOptions.maxWidth });
     } catch (err) {
       next(err);
     }
@@ -94,7 +116,7 @@ export function createApp(options = {}) {
   app.use((err, _req, res, _next) => {
     if (err instanceof multer.MulterError) {
       const status = err.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
-      return res.status(status).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'File exceeds the 10 MB limit.' : err.message });
+      return res.status(status).json({ error: err.code === 'LIMIT_FILE_SIZE' ? 'File exceeds the 25 MB limit.' : err.message });
     }
     const status = err.status || err.statusCode || 500;
     if (status >= 500) console.error(err);

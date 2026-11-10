@@ -118,6 +118,24 @@ function bindDropzone(zone, input, onFiles) {
   });
 }
 
+function formatBytes(n) {
+  return n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`;
+}
+
+/** "Uploaded 2 images to 2026/11/Project/ · 1 resized to 1200px · 8.4 MB → 610 KB" */
+function uploadSummary(res) {
+  const n = res.files.length;
+  const parts = [`Uploaded ${n} image${n === 1 ? '' : 's'} to ${res.directory}/`];
+  const resized = res.files.filter((f) => f.optimized?.resized).length;
+  const converted = res.files.filter((f) => f.optimized?.converted).length;
+  if (resized) parts.push(`${n > 1 ? `${resized} ` : ''}resized to ${res.maxWidth}px wide`);
+  if (converted) parts.push(`${n > 1 ? `${converted} ` : ''}converted from WebP for Outlook`);
+  const before = res.files.reduce((a, f) => a + (f.optimized?.originalBytes || f.size), 0);
+  const after = res.files.reduce((a, f) => a + f.size, 0);
+  if (after < before * 0.95) parts.push(`${formatBytes(before)} → ${formatBytes(after)}`);
+  return parts.join(' · ');
+}
+
 function closePicker(file = null) {
   $('#picker').hidden = true;
   const r = pickerResolve;
@@ -177,7 +195,7 @@ export const media = {
     zones.forEach((z) => z.classList.add('is-busy'));
     try {
       const res = await api.upload(fileList, projectName());
-      toast(`Uploaded ${res.files.length} image${res.files.length === 1 ? '' : 's'} to ${res.directory}/`);
+      toast(uploadSummary(res), { ms: 4500 });
       await refresh();
       return res.files;
     } catch (err) {
