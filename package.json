@@ -1,5 +1,5 @@
 {
-  "name": "atelier-email-builder",
+  "name": "swiftwing",
   "version": "1.0.0",
   "description": "WYSIWYG drag-and-drop HTML email builder with XHTML 1.0 Transitional, CSS-inlined, table-based export (Synergetic / Outlook compatible).",
   "type": "module",

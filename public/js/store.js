@@ -8,8 +8,10 @@
  *   { render: 'none' }              model-only (inline text typing)
  */
 import { createDocument, normalizeDocument } from '/shared/blocks.js';
+import { migrateStorageKey } from './ui.js';
 
-const STORAGE_KEY = 'atelier.email.doc.v1';
+const STORAGE_KEY = 'swiftwing.email.doc.v1';
+migrateStorageKey('atelier.email.doc.v1', STORAGE_KEY);
 const HISTORY_LIMIT = 100;
 const COALESCE_MS = 1200;
 

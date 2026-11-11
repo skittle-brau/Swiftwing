@@ -4,5 +4,5 @@ const port = Number(process.env.PORT) || 3000;
 const host = process.env.HOST || '0.0.0.0';
 
 createApp().listen(port, host, () => {
-  console.log(`Atelier Email Builder running at http://localhost:${port}`);
+  console.log(`Swiftwing running at http://localhost:${port}`);
 });

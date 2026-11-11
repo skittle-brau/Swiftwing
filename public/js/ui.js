@@ -1,4 +1,19 @@
 export const $ = (sel, root = document) => root.querySelector(sel);
+
+/**
+ * Move a localStorage value to a new key (used when the app was renamed from
+ * Atelier to Swiftwing) so nobody loses an autosaved draft.
+ */
+export function migrateStorageKey(oldKey, newKey) {
+  try {
+    const old = localStorage.getItem(oldKey);
+    if (old === null) return;
+    if (localStorage.getItem(newKey) === null) localStorage.setItem(newKey, old);
+    localStorage.removeItem(oldKey);
+  } catch {
+    /* storage unavailable: nothing to migrate */
+  }
+}
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 export function h(tag, attrs = {}, ...children) {
