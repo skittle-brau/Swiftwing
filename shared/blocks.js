@@ -182,6 +182,34 @@ export const BLOCK_TYPES = {
     ],
   },
 
+  video: {
+    label: 'Video',
+    group: 'content',
+    icon: 'video',
+    defaults: () => ({
+      url: '',
+      title: '',
+      thumbnailSrc: '',
+      playStyle: 'dark',
+      width: 0,
+      align: 'center',
+      bgColor: '',
+      paddingX: 30,
+      paddingY: 16,
+    }),
+    fields: [
+      { key: 'url', label: 'YouTube or Vimeo link', type: 'video' },
+      { key: 'playStyle', label: 'Play button', type: 'select', options: [['dark', 'Dark'], ['light', 'Light']] },
+      { key: 'title', label: 'Alt text', type: 'text', help: 'Filled in from the video title. Shown when images are blocked.' },
+      { key: 'thumbnailSrc', label: 'Thumbnail', type: 'image', help: 'Created automatically with a play button. Choose another image to replace it.' },
+      { key: 'width', label: 'Width (0 = full)', type: 'number', min: 0, max: 800, suffix: 'px' },
+      { key: 'align', label: 'Alignment', ...align },
+      { key: 'bgColor', label: 'Background', type: 'color', allowEmpty: true },
+      pad('paddingX', 'Horizontal padding'),
+      pad('paddingY', 'Vertical padding'),
+    ],
+  },
+
   button: {
     label: 'Button',
     group: 'content',

@@ -7,6 +7,8 @@ import { initInspector, setServerBaseUrl } from './inspector.js';
 import { media } from './media.js';
 import { initSource, copyHtml, downloadHtml } from './source.js';
 import Sortable from '/vendor/sortablejs/sortable.esm.js';
+import { initAccount } from './account.js';
+import { initTemplates } from './templates.js';
 
 /* --------------------------------------------------------------- palette */
 
@@ -52,12 +54,14 @@ function initTopbar() {
   const setMenu = (open) => {
     menu.hidden = !open;
     btn.setAttribute('aria-expanded', String(open));
+    if (open) document.dispatchEvent(new CustomEvent('app-menu-open', { detail: menu }));
   };
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     setMenu(menu.hidden);
   });
   document.addEventListener('click', () => setMenu(false));
+  document.addEventListener('app-menu-open', (e) => e.detail !== menu && setMenu(false));
   menu.addEventListener('click', (e) => {
     const action = e.target.closest('[data-file]')?.dataset.file;
     if (action === 'new' && confirm('Start a new email? Unsaved changes can still be undone.')) {
@@ -134,6 +138,11 @@ function initSidebarTabs() {
 /* ------------------------------------------------------------------- boot */
 
 async function boot() {
+  try {
+    await initAccount();
+  } catch {
+    return; // not logged in: api.js has already redirected to /login
+  }
   buildPalette();
   initSidebarTabs();
   initTopbar();
@@ -141,6 +150,7 @@ async function boot() {
   initInspector();
   initSource();
   initShortcuts();
+  initTemplates();
 
   media.onInsert = (file) => {
     const i = store.selectedId ? store.indexOf(store.selectedId) + 1 : store.doc.blocks.length;

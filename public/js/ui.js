@@ -84,6 +84,7 @@ const ICON_PATHS = {
   footer: '<rect x="3" y="3" width="26" height="20" rx="2"/><rect x="3" y="15" width="26" height="8" rx="2" fill="currentColor" stroke="none" opacity=".25"/><path d="M7 7h18M7 11h12"/><path d="M11 19h10" stroke-width="1.3"/>',
   image: '<rect x="3" y="3" width="26" height="20" rx="2"/><circle cx="10" cy="10" r="2.5"/><path d="m3 20 8-7 6 5 4-3 8 6"/>',
   button: '<rect x="5" y="8" width="22" height="10" rx="5"/><path d="M11 13h10"/>',
+  video: '<rect x="3" y="3" width="26" height="20" rx="2"/><path d="m13 8.5 7 4.5-7 4.5z" fill="currentColor"/>',
   divider: '<path d="M3 13h26"/><path d="M7 7h18M7 19h18" opacity=".35" stroke-width="1.3"/>',
   spacer: '<path d="M16 4v18"/><path d="m12 8 4-4 4 4M12 18l4 4 4-4"/><path d="M4 4h24M4 22h24" opacity=".4"/>',
   social: '<circle cx="8" cy="13" r="4"/><circle cx="16" cy="13" r="4"/><circle cx="24" cy="13" r="4"/>',
@@ -103,3 +104,146 @@ export const ICONS = {
   link: '<svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg>',
   x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
 };
+
+/**
+ * Modal dialog. `body` is a Node; each action is { label, kind?: 'primary'|'danger', onClick?(close) }.
+ * onClick may return false (or a promise of false) to keep the dialog open.
+ * Returns a close() function.
+ */
+export function openDialog({ title, body, actions = [{ label: 'Close' }], wide = false, onClose }) {
+  const previous = document.activeElement;
+  const close = () => {
+    root.remove();
+    document.removeEventListener('keydown', onKey, true);
+    onClose?.();
+    previous?.focus?.();
+  };
+  const onKey = (e) => {
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      close();
+    }
+  };
+  const footer = h('footer', { class: 'app-modal-footer' });
+  for (const a of actions) {
+    const btn = h('button', { type: a.submit ? 'submit' : 'button', class: `app-btn${a.kind === 'primary' ? ' app-btn-primary' : a.kind === 'danger' ? ' app-btn-danger' : ''}` }, a.label);
+    btn.addEventListener('click', async (e) => {
+      if (a.submit) return; // handled by form submit
+      e.preventDefault();
+      if (!a.onClick) return close();
+      btn.disabled = true;
+      try {
+        if ((await a.onClick(close)) !== false) close();
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    footer.append(btn);
+  }
+  const titleId = `dlg-${Math.random().toString(36).slice(2, 8)}`;
+  const card = h(
+    'div',
+    { class: `app-modal-card${wide ? ' app-modal-wide' : ''}`, role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': titleId, tabindex: '-1' },
+    h('header', {}, h('h2', { id: titleId }, title), h('button', { type: 'button', class: 'app-icon-btn', 'aria-label': 'Close', html: ICONS.x, onclick: close })),
+    h('div', { class: 'app-modal-body' }, body),
+    actions.length ? footer : null,
+  );
+  const root = h('div', { class: 'app-modal' }, h('div', { class: 'app-modal-backdrop', onclick: close }), card);
+  document.body.append(root);
+  document.addEventListener('keydown', onKey, true);
+  (card.querySelector('input, select, textarea') || card).focus();
+  return close;
+}
+
+/** Small form dialog: resolves with the field values, or null if cancelled. */
+export function promptDialog({ title, fields, submitLabel = 'Save', intro, validate }) {
+  return new Promise((resolve) => {
+    let done = false;
+    const error = h('div', { class: 'app-login-error', role: 'alert', hidden: true });
+    const inputs = {};
+    const form = h('form', { class: 'app-form app-form-dialog', novalidate: true });
+    if (intro) form.append(h('p', { class: 'app-dialog-intro' }, intro));
+    form.append(error);
+    for (const f of fields) {
+      const id = `pd-${f.name}`;
+      let input;
+      if (f.type === 'select') {
+        input = h('select', { id, name: f.name }, f.options.map(([v, l]) => h('option', { value: v }, l)));
+      } else if (f.type === 'textarea') {
+        input = h('textarea', { id, name: f.name, rows: 3 });
+      } else {
+        input = h('input', { id, name: f.name, class: 'app-input', type: f.type || 'text', autocomplete: f.autocomplete || 'off', spellcheck: 'false' });
+      }
+      if (f.value != null) input.value = f.value;
+      inputs[f.name] = input;
+      form.append(h('div', { class: 'app-field' }, h('label', { for: id }, f.label), input, f.help ? h('small', {}, f.help) : null));
+    }
+    const submit = async () => {
+      const values = Object.fromEntries(Object.entries(inputs).map(([k, el]) => [k, el.value]));
+      const problem = validate ? await validate(values) : null;
+      if (problem) {
+        error.textContent = problem;
+        error.hidden = false;
+        return false;
+      }
+      done = true;
+      resolve(values);
+      return true;
+    };
+    let closeFn;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (await submit()) closeFn();
+    });
+    form.append(h('button', { type: 'submit', hidden: true }));
+    closeFn = openDialog({
+      title,
+      body: form,
+      actions: [{ label: 'Cancel' }, { label: submitLabel, kind: 'primary', onClick: submit }],
+      onClose: () => {
+        if (!done) resolve(null);
+      },
+    });
+  });
+}
+
+export function formatDate(ms) {
+  if (!ms) return 'never';
+  return new Date(ms).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+}
+
+/**
+ * Dropdown menu attached to `button` (which must sit inside a `.app-menu` wrapper).
+ * `render(list, close)` fills the list each time it opens, so contents can be live.
+ */
+export function dropdown(button, render, { wide = false } = {}) {
+  const list = h('div', { class: `app-menu-list${wide ? ' app-menu-wide' : ''}`, role: 'menu', hidden: true });
+  button.after(list);
+  button.setAttribute('aria-haspopup', 'true');
+  button.setAttribute('aria-expanded', 'false');
+  const close = () => {
+    list.hidden = true;
+    button.setAttribute('aria-expanded', 'false');
+  };
+  const open = async () => {
+    document.dispatchEvent(new CustomEvent('app-menu-open', { detail: list }));
+    list.replaceChildren();
+    list.hidden = false;
+    button.setAttribute('aria-expanded', 'true');
+    await render(list, close);
+  };
+  button.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (list.hidden) open();
+    else close();
+  });
+  list.addEventListener('click', (e) => e.stopPropagation());
+  document.addEventListener('click', close);
+  document.addEventListener('keydown', (e) => e.key === 'Escape' && close());
+  document.addEventListener('app-menu-open', (e) => e.detail !== list && close());
+  return { open, close };
+}
+
+export function menuItem(label, onClick, { sub, current = false, disabled = false } = {}) {
+  return h('button', { type: 'button', role: 'menuitem', class: current ? 'is-current' : '', disabled, onclick: onClick }, label, sub ? h('small', {}, sub) : null);
+}

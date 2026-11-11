@@ -8,6 +8,6 @@ COPY shared ./shared
 COPY public ./public
 RUN mkdir -p /data/uploads && chown -R node:node /data
 USER node
-VOLUME ["/data/uploads"]
+VOLUME ["/data"]
 EXPOSE 3000
 CMD ["node", "server/index.js"]
