@@ -3,7 +3,7 @@
  *
  * Holds users, login sessions, failed-login tracking and email templates.
  * The file lives next to the uploads folder by default:
- *   /var/lib/atelier-email-builder/swiftwing.db (or atelier.db on older installs)
+ *   /var/lib/swiftwing/swiftwing.db
  */
 import path from 'node:path';
 import { mkdirSync, existsSync } from 'node:fs';

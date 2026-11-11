@@ -7,12 +7,16 @@
 #   PUBLIC_BASE_URL=https://email.example.org CADDY_IP=10.50.0.10 bash install-debian.sh
 #
 # Layout:
-#   /opt/atelier-email-builder             app code (git checkout, owned by root)
-#   /etc/atelier-email-builder/env         settings (EnvironmentFile for systemd)
-#   /var/lib/atelier-email-builder/uploads uploaded images
-#   /var/lib/atelier-email-builder/atelier.db  accounts, sessions, templates (SQLite)
-#   atelier-email-builder.service          runs as the "atelier" system user
-#   /usr/local/bin/atelier-user            account management (run as root)
+#   /opt/swiftwing                     app code (git checkout, owned by root)
+#   /etc/swiftwing/env                 settings (EnvironmentFile for systemd)
+#   /var/lib/swiftwing/uploads         uploaded images
+#   /var/lib/swiftwing/swiftwing.db    accounts, sessions, templates (SQLite)
+#   swiftwing.service                  runs as the "swiftwing" system user
+#   /usr/local/bin/swiftwing-user      account management (run as root)
+#
+# An install from before the rename (/opt/atelier-email-builder,
+# atelier-email-builder.service, user "atelier") is moved to this layout
+# automatically, keeping its settings, uploads and database.
 #
 # Optional variables:
 #   PUBLIC_BASE_URL  public HTTPS address of the site (written to the settings file)
@@ -24,16 +28,53 @@ set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/skittle-brau/atelier-email-builder.git}"
 BRANCH="${BRANCH:-main}"
-SERVICE=atelier-email-builder
-APP_USER=atelier
-APP_DIR=/opt/atelier-email-builder
-CONF_DIR=/etc/atelier-email-builder
+SERVICE=swiftwing
+APP_USER=swiftwing
+APP_DIR=/opt/swiftwing
+CONF_DIR=/etc/swiftwing
 ENV_FILE="$CONF_DIR/env"
-STATE_DIR=/var/lib/atelier-email-builder
+STATE_DIR=/var/lib/swiftwing
 DATA_DIR="$STATE_DIR/uploads"
+USER_TOOL=/usr/local/bin/swiftwing-user
+
+# Names used before the app was renamed from Atelier Email Builder.
+OLD_SERVICE=atelier-email-builder
+OLD_USER=atelier
+OLD_APP_DIR=/opt/atelier-email-builder
+OLD_CONF_DIR=/etc/atelier-email-builder
+OLD_STATE_DIR=/var/lib/atelier-email-builder
 
 [ "$(id -u)" -eq 0 ] || { echo "Run as root." >&2; exit 1; }
 export DEBIAN_FRONTEND=noninteractive
+
+# Move a path to its new name, unless the new one already exists.
+move() {
+  if [ -e "$1" ] && [ ! -e "$2" ]; then
+    echo "    $1 -> $2"
+    mv "$1" "$2"
+  fi
+}
+
+if [ -e "/etc/systemd/system/$OLD_SERVICE.service" ] || [ -d "$OLD_APP_DIR" ] || [ -d "$OLD_STATE_DIR" ]; then
+  echo "==> Moving the Atelier install to the Swiftwing layout"
+  if [ -e "/etc/systemd/system/$OLD_SERVICE.service" ]; then
+    systemctl disable --now "$OLD_SERVICE" 2>/dev/null || true
+    rm -f "/etc/systemd/system/$OLD_SERVICE.service"
+    systemctl daemon-reload
+  fi
+  move "$OLD_APP_DIR" "$APP_DIR"
+  move "$OLD_CONF_DIR" "$CONF_DIR"
+  move "$OLD_STATE_DIR" "$STATE_DIR"
+  for ext in "" -wal -shm; do
+    [ -e "$STATE_DIR/swiftwing.db" ] || move "$STATE_DIR/atelier.db$ext" "$STATE_DIR/swiftwing.db$ext"
+  done
+  [ -f "$ENV_FILE" ] && sed -i "s#$OLD_STATE_DIR#$STATE_DIR#g" "$ENV_FILE"
+  rm -f /usr/local/bin/atelier-user
+  if id "$OLD_USER" >/dev/null 2>&1 && ! id "$APP_USER" >/dev/null 2>&1; then
+    usermod -l "$APP_USER" -d "$STATE_DIR" "$OLD_USER"
+    groupmod -n "$APP_USER" "$OLD_USER" 2>/dev/null || true
+  fi
+fi
 
 echo "==> Installing base packages"
 apt-get update -q
@@ -115,16 +156,16 @@ systemctl daemon-reload
 systemctl enable -q "$SERVICE"
 systemctl restart "$SERVICE"
 
-echo "==> Account tool (/usr/local/bin/atelier-user)"
-cat > /usr/local/bin/atelier-user <<EOF
+echo "==> Account tool ($USER_TOOL)"
+cat > "$USER_TOOL" <<EOF
 #!/bin/sh
 # Manage Swiftwing accounts:
-#   atelier-user add <username> [--admin] | passwd <username> | role <username> admin|editor
-#   atelier-user unlock <username> | remove <username> | list
+#   swiftwing-user add <username> [--admin] | passwd <username> | role <username> admin|editor
+#   swiftwing-user unlock <username> | remove <username> | list
 set -a; . $ENV_FILE; set +a
 exec runuser -u $APP_USER -- /usr/bin/node $APP_DIR/server/cli.js user "\$@"
 EOF
-chmod 0755 /usr/local/bin/atelier-user
+chmod 0755 "$USER_TOOL"
 
 if [ -n "${CADDY_IP:-}" ]; then
   echo "==> Restricting port $APP_PORT to $CADDY_IP"
@@ -147,8 +188,8 @@ echo "==> Checking health"
 for _ in $(seq 1 15); do
   if curl -fsS "http://127.0.0.1:$APP_PORT/api/health" >/dev/null 2>&1; then
     echo "OK: Swiftwing is running on port $APP_PORT"
-    if ! atelier-user list 2>/dev/null | grep -qv '^No accounts'; then
-      echo "NEXT: create the first admin account with: atelier-user add <your-username> --admin"
+    if ! "$USER_TOOL" list 2>/dev/null | grep -qv '^No accounts'; then
+      echo "NEXT: create the first admin account with: swiftwing-user add <your-username> --admin"
     fi
     if ! grep -q '^PUBLIC_BASE_URL=.\+' "$ENV_FILE"; then
       echo "NOTE: PUBLIC_BASE_URL is empty in $ENV_FILE. Set it to your public https:// address and run: systemctl restart $SERVICE"

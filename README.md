@@ -28,7 +28,7 @@ To configure the server, copy `.env.example` to `.env`:
 
 ### Debian / LXC (systemd)
 
-Swiftwing was previously called Atelier Email Builder. The server folders, service, system user and `atelier-user` command below still use the old name; they will be renamed when the app moves to Podman.
+Swiftwing was previously called Atelier Email Builder. On a server set up before the rename (`/opt/atelier-email-builder`, `atelier-email-builder.service`), the script stops the old service and moves the code, settings, uploads and database into the new layout below, renaming the `atelier` user to `swiftwing`.
 
 `deploy/install-debian.sh` installs or updates the app on Debian 12/13. Run it as root:
 
@@ -40,14 +40,14 @@ Optionally pass `PUBLIC_BASE_URL=https://…` to set the public address, and `CA
 
 | Path | Purpose |
 |---|---|
-| `/opt/atelier-email-builder` | App code (git checkout) |
-| `/etc/atelier-email-builder/env` | Settings (`PORT`, `HOST`, `UPLOAD_DIR`, `PUBLIC_BASE_URL`, …) |
-| `/var/lib/atelier-email-builder/uploads` | Uploaded images. Back this up |
-| `/var/lib/atelier-email-builder/atelier.db` | Accounts, sessions and templates (`swiftwing.db` on new installs). Back this up |
-| `atelier-email-builder.service` | systemd unit, running as the `atelier` user |
-| `/usr/local/bin/atelier-user` | Account management command (run as root) |
+| `/opt/swiftwing` | App code (git checkout) |
+| `/etc/swiftwing/env` | Settings (`PORT`, `HOST`, `UPLOAD_DIR`, `PUBLIC_BASE_URL`, …) |
+| `/var/lib/swiftwing/uploads` | Uploaded images. Back this up |
+| `/var/lib/swiftwing/swiftwing.db` | Accounts, sessions and templates. Back this up |
+| `swiftwing.service` | systemd unit, running as the `swiftwing` user |
+| `/usr/local/bin/swiftwing-user` | Account management command (run as root) |
 
-After editing the settings file, run `systemctl restart atelier-email-builder`. Create the first admin with `atelier-user add yourname --admin`.
+After editing the settings file, run `systemctl restart swiftwing`. Create the first admin with `swiftwing-user add yourname --admin`.
 
 ### Docker
 
@@ -69,14 +69,14 @@ Everyone logs in with a username and password. Only `/uploads/…` (images in se
 - **Rate limit:** more than 30 failed logins from one IP address in 15 minutes are blocked for the rest of that window, which stops guessing across many usernames.
 - **Sessions:** a random 256-bit token in an `HttpOnly`, `SameSite=Lax` cookie (`Secure` over HTTPS); only its SHA-256 is stored. Sessions end after 7 days without use or 30 days in total. Changing or resetting a password signs out the account's other sessions.
 - **Cross-site requests:** changes (POST/PUT/PATCH/DELETE) must come from this site's own pages (checked with the `Origin` header).
-- Failed-login lockouts are logged to the service log (`journalctl -u atelier-email-builder`).
+- Failed-login lockouts are logged to the service log (`journalctl -u swiftwing`).
 
-From the server's command line (`atelier-user` on the LXC, `npm run user --` in development):
+From the server's command line (`swiftwing-user` on the LXC, `npm run user --` in development):
 
 ```
-atelier-user add <username> [--admin]     atelier-user passwd <username>
-atelier-user role <username> admin|editor  atelier-user unlock <username>
-atelier-user remove <username>             atelier-user list
+swiftwing-user add <username> [--admin]     swiftwing-user passwd <username>
+swiftwing-user role <username> admin|editor  swiftwing-user unlock <username>
+swiftwing-user remove <username>             swiftwing-user list
 ```
 
 ### Templates

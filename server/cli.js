@@ -12,7 +12,7 @@
  * Passwords are typed at a hidden prompt, or read from stdin when piped
  * (echo 'pw' | node server/cli.js user add jo). The database location comes
  * from DB_PATH / UPLOAD_DIR like the server (on the LXC, use the
- * `atelier-user` wrapper the install script creates).
+ * `swiftwing-user` wrapper the install script creates).
  */
 import path from 'node:path';
 import fs from 'node:fs';
