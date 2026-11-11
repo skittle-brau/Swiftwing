@@ -5,9 +5,10 @@
 import { createDocument, DEFAULT_SETTINGS } from '/shared/blocks.js';
 import { api } from './api.js';
 import { store } from './store.js';
-import { $, h, dropdown, menuItem, openDialog, promptDialog, toast, formatDate, ICONS } from './ui.js';
+import { migrateStorageKey, $, h, dropdown, menuItem, openDialog, promptDialog, toast, formatDate, ICONS } from './ui.js';
 
-const KEY = 'atelier.template.v1';
+const KEY = 'swiftwing.template.v1';
+migrateStorageKey('atelier.template.v1', KEY);
 let current = load(); // { id, name } of the template the current email came from
 
 function load() {

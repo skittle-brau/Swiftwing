@@ -73,7 +73,7 @@ test('passes xmllint well-formedness check (when xmllint is installed)', (t) => 
   } catch {
     return t.skip('xmllint not available');
   }
-  const dir = mkdtempSync(path.join(tmpdir(), 'atelier-'));
+  const dir = mkdtempSync(path.join(tmpdir(), 'swiftwing-'));
   const file = path.join(dir, 'email.html');
   writeFileSync(file, exportEmail(docWithEverything()).html);
   execFileSync('xmllint', ['--noout', '--nonet', file]); // throws on error

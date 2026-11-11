@@ -3,10 +3,10 @@
  *
  * Holds users, login sessions, failed-login tracking and email templates.
  * The file lives next to the uploads folder by default:
- *   /var/lib/atelier-email-builder/atelier.db
+ *   /var/lib/atelier-email-builder/swiftwing.db (or atelier.db on older installs)
  */
 import path from 'node:path';
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
@@ -72,11 +72,15 @@ const MIGRATIONS = [
   `,
 ];
 
-/** Default database path: DB_PATH, else next to UPLOAD_DIR, else <root>/data/atelier.db. */
+/**
+ * Default database path: DB_PATH, else swiftwing.db next to UPLOAD_DIR, else <root>/data/swiftwing.db.
+ * An existing atelier.db (the project's previous name) in that folder is used as-is, so upgrades keep their data.
+ */
 export function defaultDbPath(root) {
   if (process.env.DB_PATH) return path.resolve(process.env.DB_PATH);
-  if (process.env.UPLOAD_DIR) return path.join(path.dirname(path.resolve(process.env.UPLOAD_DIR)), 'atelier.db');
-  return path.join(path.resolve(root), 'data', 'atelier.db');
+  const dir = process.env.UPLOAD_DIR ? path.dirname(path.resolve(process.env.UPLOAD_DIR)) : path.join(path.resolve(root), 'data');
+  const legacy = path.join(dir, 'atelier.db');
+  return existsSync(legacy) ? legacy : path.join(dir, 'swiftwing.db');
 }
 
 export function openDatabase(file) {

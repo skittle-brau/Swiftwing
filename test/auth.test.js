@@ -33,7 +33,7 @@ test('successful login sets a hardened session cookie', async () => {
   const res = await c.login('JO', 'jo password 12345'); // usernames are case-insensitive
   assert.equal(res.status, 200);
   const cookie = res.headers.get('set-cookie');
-  assert.match(cookie, /^atelier_session=[\w-]{43};/);
+  assert.match(cookie, /^swiftwing_session=[\w-]{43};/);
   assert.match(cookie, /HttpOnly/);
   assert.match(cookie, /SameSite=Lax/);
   const me = await (await c.fetch('/api/auth/me')).json();

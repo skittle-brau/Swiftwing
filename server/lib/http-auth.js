@@ -5,7 +5,7 @@
 import express from 'express';
 import { AuthError } from './auth.js';
 
-export const COOKIE = 'atelier_session';
+export const COOKIE = 'swiftwing_session';
 
 /** Paths reachable without logging in. Everything else needs a session. */
 const PUBLIC_API = new Set(['/api/health', '/api/auth/login', '/api/auth/status']);

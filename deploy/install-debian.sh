@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Atelier Email Builder: install or update on a Debian 12/13 host or LXC.
+# Swiftwing: install or update on a Debian 12/13 host or LXC.
 # Run as root. Safe to re-run: on an existing install it pulls the latest code,
 # reinstalls packages and restarts the service, keeping settings and uploads.
 #
@@ -89,7 +89,7 @@ APP_PORT="${APP_PORT:-3000}"
 echo "==> systemd service ($SERVICE)"
 cat > "/etc/systemd/system/$SERVICE.service" <<EOF
 [Unit]
-Description=Atelier Email Builder
+Description=Swiftwing email builder
 After=network-online.target
 Wants=network-online.target
 
@@ -118,7 +118,7 @@ systemctl restart "$SERVICE"
 echo "==> Account tool (/usr/local/bin/atelier-user)"
 cat > /usr/local/bin/atelier-user <<EOF
 #!/bin/sh
-# Manage Atelier Email Builder accounts:
+# Manage Swiftwing accounts:
 #   atelier-user add <username> [--admin] | passwd <username> | role <username> admin|editor
 #   atelier-user unlock <username> | remove <username> | list
 set -a; . $ENV_FILE; set +a
@@ -146,7 +146,7 @@ fi
 echo "==> Checking health"
 for _ in $(seq 1 15); do
   if curl -fsS "http://127.0.0.1:$APP_PORT/api/health" >/dev/null 2>&1; then
-    echo "OK: Atelier is running on port $APP_PORT"
+    echo "OK: Swiftwing is running on port $APP_PORT"
     if ! atelier-user list 2>/dev/null | grep -qv '^No accounts'; then
       echo "NEXT: create the first admin account with: atelier-user add <your-username> --admin"
     fi

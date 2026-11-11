@@ -1,4 +1,4 @@
-# Atelier Email Builder
+# Swiftwing
 
 A WYSIWYG, drag-and-drop HTML email editor. It exports **XHTML 1.0 Transitional**, **table-based** HTML with **all CSS inlined**, so the output can be pasted into Synergetic and other school or enterprise mailers and still render in Outlook desktop, Gmail and Apple Mail.
 
@@ -23,10 +23,12 @@ To configure the server, copy `.env.example` to `.env`:
 | `PUBLIC_BASE_URL` | request origin | Public origin used to make `/uploads/...` image URLs absolute in exported HTML. **Set this in production** so that recipients can load images. |
 | `MAX_IMAGE_WIDTH` | `1200`       | Uploaded images wider than this are downscaled |
 | `JPEG_QUALITY`    | `82`         | JPEG compression quality (1–100) |
-| `DB_PATH`         | next to `UPLOAD_DIR` | SQLite file for accounts, sessions and templates (`./data/atelier.db` in development) |
+| `DB_PATH`         | next to `UPLOAD_DIR` | SQLite file for accounts, sessions and templates (`./data/swiftwing.db` in development; an existing `atelier.db` there is kept) |
 | `TRUST_PROXY`     | private networks | Which reverse proxies may set `X-Forwarded-For`/`-Proto`. Set to your Caddy IP to be strict |
 
 ### Debian / LXC (systemd)
+
+Swiftwing was previously called Atelier Email Builder. The server folders, service, system user and `atelier-user` command below still use the old name; they will be renamed when the app moves to Podman.
 
 `deploy/install-debian.sh` installs or updates the app on Debian 12/13. Run it as root:
 
@@ -41,7 +43,7 @@ Optionally pass `PUBLIC_BASE_URL=https://…` to set the public address, and `CA
 | `/opt/atelier-email-builder` | App code (git checkout) |
 | `/etc/atelier-email-builder/env` | Settings (`PORT`, `HOST`, `UPLOAD_DIR`, `PUBLIC_BASE_URL`, …) |
 | `/var/lib/atelier-email-builder/uploads` | Uploaded images. Back this up |
-| `/var/lib/atelier-email-builder/atelier.db` | Accounts, sessions and templates. Back this up |
+| `/var/lib/atelier-email-builder/atelier.db` | Accounts, sessions and templates (`swiftwing.db` on new installs). Back this up |
 | `atelier-email-builder.service` | systemd unit, running as the `atelier` user |
 | `/usr/local/bin/atelier-user` | Account management command (run as root) |
 
@@ -50,9 +52,9 @@ After editing the settings file, run `systemctl restart atelier-email-builder`. 
 ### Docker
 
 ```bash
-docker build -t atelier-email-builder .
-docker run -p 3000:3000 -v atelier-data:/data \
-  -e PUBLIC_BASE_URL=https://email-assets.example.org atelier-email-builder
+docker build -t swiftwing .
+docker run -p 3000:3000 -v swiftwing-data:/data \
+  -e PUBLIC_BASE_URL=https://email-assets.example.org swiftwing
 docker exec -it <container> node server/cli.js user add yourname --admin
 ```
 

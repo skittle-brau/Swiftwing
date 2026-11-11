@@ -78,7 +78,7 @@ function initTopbar() {
     if (!file) return;
     try {
       const doc = JSON.parse(await file.text());
-      if (!Array.isArray(doc.blocks)) throw new Error('Not an Atelier design file.');
+      if (!Array.isArray(doc.blocks)) throw new Error('Not a Swiftwing design file.');
       store.replace(doc);
       toast(`Opened ${file.name}`);
     } catch (err) {
@@ -92,7 +92,7 @@ function syncTopbar() {
   $('#btn-redo').disabled = !store.future.length;
   const name = $('#project-name');
   if (document.activeElement !== name) name.value = store.doc.settings.projectName;
-  document.title = `${store.doc.settings.projectName} · Atelier Email Builder`;
+  document.title = `${store.doc.settings.projectName} · Swiftwing`;
 }
 
 /* -------------------------------------------------------------- shortcuts */

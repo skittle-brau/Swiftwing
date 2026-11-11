@@ -68,7 +68,7 @@ async function fetchLimited(fetchImpl, url, { as = 'buffer' } = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
-    const res = await fetchImpl(target.href, { signal: ctrl.signal, redirect: 'error', headers: { 'user-agent': 'AtelierEmailBuilder/1.0' } });
+    const res = await fetchImpl(target.href, { signal: ctrl.signal, redirect: 'error', headers: { 'user-agent': 'Swiftwing/1.0' } });
     if (!res.ok) return { ok: false, status: res.status };
     const len = Number(res.headers.get('content-length') || 0);
     if (len > MAX_BYTES) throw new VideoError('Thumbnail is too large.', 502);
