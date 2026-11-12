@@ -133,3 +133,40 @@ test('toXhtml leaves MSO conditional comments untouched', () => {
   const out = toXhtml('<html><body><!--[if mso]><table><tr><td><br><![endif]--><br></body></html>');
   assert.match(out, /<!--\[if mso\]><table><tr><td><br><!\[endif\]--><br \/>/);
 });
+
+test('full-width layout: 100% tables, percentage columns, pixel-sized images', (t) => {
+  const doc = docWithEverything();
+  doc.settings.fullWidth = true;
+  doc.blocks.push(createBlock('columns2', { ratio: '33' }));
+  const { html } = exportEmail(doc);
+  assert.match(html, /<table class="ae-container" width="100%"/);
+  const rows = [...html.matchAll(/<table class="ae-row[^"]*" width="([^"]+)"/g)].map((m) => m[1]);
+  assert.ok(rows.length >= 8);
+  assert.ok(rows.every((w) => w === '100%'));
+  assert.doesNotMatch(html, /<table class="ae-row[^>]*width: 600px/);
+  // No fixed-width Outlook wrapper and no grey margin above/below.
+  assert.doesNotMatch(html, /<!--\[if mso\]><table align="center" width="600"/);
+  assert.match(html, /<td align="center" valign="top" style="[^"]*padding: 0;/);
+  // Columns split by percentage.
+  const cols = [...html.matchAll(/<td class="ae-col ae-cell" width="([^"]+)"/g)].map((m) => m[1]);
+  assert.deepEqual(cols.slice(-2), ['33%', '67%']);
+  // Images keep explicit pixel widths (Outlook ignores percentages on images).
+  assert.match(html, /<img [^>]*alt="Hero" width="600"/);
+  // Mobile stacking still applies.
+  assert.match(html, /@media only screen and \(max-width:620px\)/);
+
+  try {
+    execFileSync('xmllint', ['--version'], { stdio: 'ignore' });
+  } catch {
+    return t.skip('xmllint not available');
+  }
+  const dir = mkdtempSync(path.join(tmpdir(), 'swiftwing-'));
+  writeFileSync(path.join(dir, 'full.html'), html);
+  execFileSync('xmllint', ['--noout', '--nonet', path.join(dir, 'full.html')]);
+});
+
+test('fixed-width layout is unchanged by default', () => {
+  const { html } = exportEmail(docWithEverything());
+  assert.match(html, /<table class="ae-container" width="600"/);
+  assert.match(html, /<!--\[if mso\]><table align="center" width="600"/);
+});

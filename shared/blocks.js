@@ -37,6 +37,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   subject: 'School Newsletter',
   preheader: '',
   width: 600,
+  fullWidth: false,
   bodyBg: '#f4f4f4',
   contentBg: '#ffffff',
   fontFamily: 'Arial, Helvetica, sans-serif',

@@ -20,7 +20,21 @@ const SETTINGS_FIELDS = [
   { key: 'subject', label: 'Subject / title', type: 'text', help: 'Used for the HTML <title>.' },
   { key: 'preheader', label: 'Preheader text', type: 'text', help: 'Hidden preview text shown after the subject in most inboxes.' },
   { type: 'divider' },
-  { key: 'width', label: 'Email width', type: 'number', min: 320, max: 800, suffix: 'px' },
+  {
+    key: 'fullWidth',
+    label: 'Full width (100%)',
+    type: 'checkbox',
+    help: 'Fill the reader’s window like a normal email, instead of a centred fixed-width layout. Images keep their pixel sizes.',
+  },
+  {
+    key: 'width',
+    label: 'Email width',
+    type: 'number',
+    min: 320,
+    max: 800,
+    suffix: 'px',
+    help: 'In full-width mode this sets the size of full-width images and column images instead.',
+  },
   { key: 'fontFamily', label: 'Font family', type: 'select', options: FONT_STACKS.map((f) => [f.value, f.label]) },
   { row: [
     { key: 'fontSize', label: 'Body size', type: 'number', min: 10, max: 24, suffix: 'px' },
