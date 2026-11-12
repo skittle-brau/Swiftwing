@@ -140,6 +140,14 @@ export function buildCss(doc, { includeResets = true } = {}) {
       rules.push(`${sel('.ae-rich h1,.ae-rich h2,.ae-rich h3')}{color:${tc};}`);
       if (b.type !== 'text') rules.push(`${sel('.ae-rich a')}{color:${tc};}`);
     }
+    if (b.type === 'table') {
+      const f = num(p.fontSize, 9, 24, 14);
+      const l = Math.round(f * 1.45);
+      rules.push(`${sel('.ae-rich,.ae-rich p,.ae-rich li')}{font-size:${f}px;line-height:${l}px;}`);
+      rules.push(`${sel('.ae-rich p,.ae-rich ul,.ae-rich ol')}{margin-bottom:${Math.round(f * 0.6)}px;}`);
+      rules.push(`${sel('.ae-rich p:last-child')}{margin-bottom:0;}`);
+      rules.push(`${sel('.ae-th .ae-rich,.ae-th .ae-rich p')}{font-weight:bold;}`);
+    }
     if (b.type === 'footer') {
       const f = num(p.fontSize, 9, 20, 12);
       const l = Math.round(f * 1.5);
@@ -182,6 +190,13 @@ function rowTable(block, ctx, inner, { bg = '' } = {}) {
 
 function padStyle(px, py) {
   return `padding:${py}px ${px}px ${py}px ${px}px;`;
+}
+
+/** Rectangular cell grid: at least 1×1, every row padded to the widest row. */
+export function normalizeCells(cells) {
+  const rows = Array.isArray(cells) && cells.length ? cells.map((r) => (Array.isArray(r) ? r.map((c) => String(c ?? '')) : [])) : [['']];
+  const width = Math.max(1, ...rows.map((r) => r.length));
+  return rows.map((r) => [...r, ...Array(width - r.length).fill('')]);
 }
 
 function rich(html, path, ctx, extraStyle = '') {
@@ -450,6 +465,68 @@ const renderers = {
         ? `<div class="app-empty-inline">Add social links in the inspector →</div>`
         : '';
     return rowTable(b, ctx, `<td class="ae-pad" align="${a}" valign="top" style="${padStyle(px, py)}">${inner}</td>`, { bg });
+  },
+
+  table(b, ctx) {
+    const p = b.props;
+    const s = ctx.settings;
+    const px = num(p.paddingX, 0, 80, 30);
+    const py = num(p.paddingY, 0, 80, 16);
+    const bg = color(p.bgColor);
+    const rows = normalizeCells(p.cells);
+    const nCols = rows[0].length;
+    const style = pick(p.borderStyle, ['all', 'rows', 'outer', 'none'], 'all');
+    const bw = num(p.borderWidth, 1, 6, 1);
+    const line = `${bw}px solid ${color(p.borderColor, '#d0d5dd')}`;
+    const pad = num(p.cellPadding, 0, 30, 8);
+    const fs = num(p.fontSize, 9, 24, 14);
+    const align = pick(p.textAlign, ['left', 'center', 'right'], 'left');
+    const valign = pick(p.valign, ['top', 'middle', 'bottom'], 'top');
+    const header = !!p.headerRow;
+    const headerBg = color(p.headerBg);
+    const headerColor = color(p.headerColor);
+    const stripe = color(p.stripeBg);
+    const equal = p.colWidths !== 'auto';
+    const pct = Math.floor(100 / nCols);
+
+    const borders = (r, c) => {
+      if (style === 'none') return '';
+      if (style === 'all') return `border:${line};`;
+      const last = r === rows.length - 1;
+      if (style === 'rows') return `border-top:${line};${last ? `border-bottom:${line};` : ''}`;
+      // outer
+      return (
+        (r === 0 ? `border-top:${line};` : '') +
+        (last ? `border-bottom:${line};` : '') +
+        (c === 0 ? `border-left:${line};` : '') +
+        (c === nCols - 1 ? `border-right:${line};` : '')
+      );
+    };
+
+    const body = rows
+      .map((cells, r) => {
+        const isHead = header && r === 0;
+        const dataIndex = header ? r - 1 : r;
+        const rowBg = isHead ? headerBg : stripe && dataIndex % 2 === 1 ? stripe : '';
+        const tag = isHead ? 'th' : 'td';
+        const tds = cells
+          .map((html, c) => {
+            const fg = isHead && headerColor ? headerColor : s.textColor;
+            const width = equal ? ` width="${c === nCols - 1 ? 100 - pct * (nCols - 1) : pct}%"` : '';
+            const content = html || (ctx.editable ? '' : '&nbsp;');
+            return (
+              `<${tag} class="ae-cell${isHead ? ' ae-th' : ''}" align="${align}" valign="${valign}"${width}${rowBg ? ` bgcolor="${rowBg}"` : ''}` +
+              ` style="${borders(r, c)}padding:${pad}px;text-align:${align};vertical-align:${valign};font-size:${fs}px;line-height:${Math.round(fs * 1.45)}px;color:${fg};${isHead ? 'font-weight:bold;' : ''}${rowBg ? `background-color:${rowBg};` : ''}">` +
+              `${rich(content, `cells.${r}.${c}`, ctx, `color:${fg};`)}</${tag}>`
+            );
+          })
+          .join('');
+        return `<tr>${tds}</tr>`;
+      })
+      .join('');
+
+    const table = `<table class="ae-table" width="100%"${tableAttrs(ctx)} style="width:100%;border-collapse:collapse;">${body}</table>`;
+    return rowTable(b, ctx, `<td class="ae-pad" valign="top" style="${padStyle(px, py)}">${table}</td>`, { bg });
   },
 
   html(b, ctx) {

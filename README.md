@@ -84,7 +84,8 @@ swiftwing-user remove <username>             swiftwing-user list
 
 ### Drag-and-drop canvas
 - **Layouts:** Header, 1 Column, 2 Columns (50/50, 33/67, 67/33, stacking on mobile), Footer.
-- **Content:** Image, Video, Button (bulletproof table button), Divider, Spacer, Social Links, Raw HTML.
+- **Content:** Image, Video, Table, Button (bulletproof table button), Divider, Spacer, Social Links, Raw HTML.
+- **Table:** set the number of rows and columns (up to 30 × 8; cell text is kept when resizing), header row, borders (all lines, horizontal lines, outline only or none), border width and colour, cell padding, header colours, alternate row shading, font size, alignment, and equal or fit-to-content column widths. Click any cell to edit it with the rich-text toolbar. Exported with explicit `border`, `padding` and `bgcolor` on each cell so Outlook renders it the same.
 - **Video:** paste a YouTube or Vimeo link (watch, `youtu.be`, Shorts, live, embed, unlisted Vimeo links). The server fetches the video's thumbnail and title, draws a play button into the image (dark or light), saves it to the project's upload folder, and links the image to the video. The title becomes the alt text. Email clients can't play video, so this is the standard approach. The server needs outbound HTTPS to `www.youtube.com`, `i.ytimg.com`, `vimeo.com` and `i.vimeocdn.com`.
 - Drag blocks from the left sidebar onto the canvas, or click one to insert it after the current selection.
 - Reorder blocks with the ⠿ handle. Each block's toolbar can also move it up or down, duplicate it and delete it.
