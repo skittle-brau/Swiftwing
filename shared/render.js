@@ -262,13 +262,24 @@ const renderers = {
     const bg = color(p.bgColor);
     const valign = pick(p.valign, ['top', 'middle', 'bottom'], 'top');
     const inner = W - px * 2;
+    const fixed = p.ratio === 'fixed';
     const r = { 50: 0.5, 33: 1 / 3, 67: 2 / 3 }[p.ratio] ?? 0.5;
-    const leftW = Math.round((inner - gap) * r);
-    const widths = [leftW, inner - gap - leftW];
+    let widths;
+    if (fixed) {
+      // Exact pixel widths (e.g. a co-authored byline), scaled down only if they can't fit.
+      widths = [num(p.leftWidth, 40, 800, 220), num(p.rightWidth, 40, 800, 220)];
+      const room = inner - gap;
+      const total = widths[0] + widths[1];
+      if (total > room) widths = [Math.floor((widths[0] * room) / total), room - Math.floor((widths[0] * room) / total)];
+    } else {
+      const leftW = Math.round((inner - gap) * r);
+      widths = [leftW, inner - gap - leftW];
+    }
     const cols = (p.columns || []).slice(0, 2);
     while (cols.length < 2) cols.push({ html: '' });
 
-    const full = ctx.settings.fullWidth;
+    // Full-width emails split proportional columns by percentage; fixed columns stay in pixels.
+    const full = ctx.settings.fullWidth && !fixed;
     const leftPct = Math.round(r * 100);
     const pcts = [leftPct, 100 - leftPct];
     const colTd = (c, i) => {
@@ -284,10 +295,14 @@ const renderers = {
         `${img}${space}${rich(c.html, `columns.${i}.html`, ctx)}</td>`
       );
     };
+    const gridW = widths[0] + widths[1] + gap;
+    const gridAlign = pick(p.gridAlign, ['left', 'center', 'right'], 'left');
     const grid =
-      (full
-        ? `<table width="100%"${tableAttrs(ctx)} style="width:100%;"><tr>`
-        : `<table width="${inner}"${tableAttrs(ctx)} style="width:100%;max-width:${inner}px;"><tr>`) +
+      (fixed
+        ? `<table width="${gridW}"${tableAttrs(ctx)} align="${gridAlign}" style="width:${gridW}px;max-width:100%;"><tr>`
+        : full
+          ? `<table width="100%"${tableAttrs(ctx)} style="width:100%;"><tr>`
+          : `<table width="${inner}"${tableAttrs(ctx)} style="width:100%;max-width:${inner}px;"><tr>`) +
       colTd(cols[0], 0) +
       (gap ? `<td class="ae-col-gap" width="${gap}" style="width:${gap}px;font-size:0;line-height:0;">&nbsp;</td>` : '') +
       colTd(cols[1], 1) +

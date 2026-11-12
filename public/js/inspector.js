@@ -208,6 +208,8 @@ function socialEditor(items, commit) {
 
 function renderFields(form, fields, getValue, onCommit) {
   for (const field of fields) {
+    // Fields that only apply to one choice of another field, e.g. pixel widths for "Fixed pixel widths".
+    if (field.showIf && String(getValue(field.showIf[0])) !== field.showIf[1]) continue;
     if (field.type === 'divider') {
       form.append(h('div', { class: 'app-divider' }));
       continue;
@@ -291,6 +293,11 @@ export function renderInspector() {
         if (b) setPath(b.props, field.key, v);
       }, { render: 'block', id: block.id, coalesce: `${block.id}:${field.key}`, source: 'inspector' });
       if (block.type === 'image' && field.key === 'src' && v) fitImageWidth(block.id);
+      // Show or hide fields that depend on this one.
+      if (def.fields.some((f) => f.showIf?.[0] === field.key)) {
+        renderInspector();
+        return;
+      }
       if (block.type === 'video' && field.key === 'playStyle' && block.props.url) fetchVideo(block.id, block.props.url, {});
       if (extra.rerenderInspector) renderInspector();
     },

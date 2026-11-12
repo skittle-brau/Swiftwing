@@ -170,3 +170,21 @@ test('fixed-width layout is unchanged by default', () => {
   assert.match(html, /<table class="ae-container" width="600"/);
   assert.match(html, /<!--\[if mso\]><table align="center" width="600"/);
 });
+
+test('two columns with fixed pixel widths (e.g. a co-authored byline)', () => {
+  const doc = createDocument('Byline');
+  doc.blocks = [createBlock('columns2', { ratio: 'fixed', leftWidth: 200, rightWidth: 180, gap: 20, gridAlign: 'center' })];
+  for (const fullWidth of [false, true]) {
+    doc.settings.fullWidth = fullWidth;
+    const { html } = exportEmail(doc);
+    assert.match(html, /<table width="400" cellpadding="0" cellspacing="0" border="0" align="center" style="[^"]*width: 400px; max-width: 100%;/);
+    const cols = [...html.matchAll(/<td class="ae-col ae-cell" width="([^"]+)"/g)].map((m) => m[1]);
+    assert.deepEqual(cols, ['200', '180'], `fullWidth=${fullWidth}`);
+  }
+  // Widths that don't fit are scaled down to the space available (600 - 2×30 padding - 20 gap).
+  doc.settings.fullWidth = false;
+  doc.blocks[0].props.leftWidth = 600;
+  doc.blocks[0].props.rightWidth = 600;
+  const cols = [...exportEmail(doc).html.matchAll(/<td class="ae-col ae-cell" width="(\d+)"/g)].map((m) => Number(m[1]));
+  assert.equal(cols[0] + cols[1], 520);
+});

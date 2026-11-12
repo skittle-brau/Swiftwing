@@ -108,6 +108,9 @@ export const BLOCK_TYPES = {
     icon: 'col2',
     defaults: () => ({
       ratio: '50',
+      leftWidth: 220,
+      rightWidth: 220,
+      gridAlign: 'left',
       gap: 20,
       valign: 'top',
       bgColor: '',
@@ -119,7 +122,20 @@ export const BLOCK_TYPES = {
       ],
     }),
     fields: [
-      { key: 'ratio', label: 'Column split', type: 'select', options: [['50', '50 / 50'], ['33', '33 / 67'], ['67', '67 / 33']] },
+      {
+        key: 'ratio',
+        label: 'Column widths',
+        type: 'select',
+        options: [['50', '50 / 50'], ['33', '33 / 67'], ['67', '67 / 33'], ['fixed', 'Fixed pixel widths']],
+      },
+      {
+        showIf: ['ratio', 'fixed'],
+        row: [
+          { key: 'leftWidth', label: 'Left width', type: 'number', min: 40, max: 800, suffix: 'px' },
+          { key: 'rightWidth', label: 'Right width', type: 'number', min: 40, max: 800, suffix: 'px' },
+        ],
+      },
+      { key: 'gridAlign', label: 'Position', type: 'select', options: [['left', 'Left'], ['center', 'Center'], ['right', 'Right']], showIf: ['ratio', 'fixed'] },
       { key: 'gap', label: 'Gutter', type: 'number', min: 0, max: 60, suffix: 'px' },
       { key: 'valign', label: 'Vertical align', type: 'select', options: [['top', 'Top'], ['middle', 'Middle'], ['bottom', 'Bottom']] },
       { key: 'columns.0.imageSrc', label: 'Left image', type: 'image' },
