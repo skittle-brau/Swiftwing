@@ -48,6 +48,7 @@ export const DEFAULT_SETTINGS = Object.freeze({
   linkColor: '#1a5fb4',
   assetBaseUrl: '',
   doctype: 'html4',
+  synergetic: false,
   strictXhtml: true,
 });
 

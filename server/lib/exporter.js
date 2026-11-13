@@ -102,6 +102,22 @@ export function toXhtml(html) {
   return serialize(html, 'xhtml');
 }
 
+/**
+ * Synergetic compatibility: adjustments for markup that Synergetic (the
+ * school CRM the HTML is pasted into) strips or rewrites.
+ *
+ * Stage 1: no rules yet. The test pack in docs/synergetic-tests/ is pasted
+ * into Synergetic and the result compared (npm run synergetic-compare) to
+ * find out what it changes; each finding becomes a rule here.
+ *
+ * Each rule: { id, description, apply(html, ctx) => html }.
+ */
+export const SYNERGETIC_RULES = [];
+
+export function applySynergetic(html, ctx = {}) {
+  return SYNERGETIC_RULES.reduce((out, rule) => rule.apply(out, ctx), html);
+}
+
 /** Collect editor-facing warnings about the exported document. */
 export function lint(doc, html) {
   const warnings = [];
@@ -145,7 +161,16 @@ export function exportEmail(rawDoc, opts = {}) {
   const baseUrl = (doc.settings.assetBaseUrl || opts.baseUrl || '').trim();
   const source = renderEmailDocument(doc, { baseUrl });
   const inlined = juice(source, JUICE_OPTIONS);
-  const { doctype } = normalizeSettings(doc.settings);
-  const html = serialize(inlined, doctype);
-  return { html, doctype, doctypeLabel: DOCTYPES[doctype].label, bytes: Buffer.byteLength(html, 'utf8'), warnings: lint(doc, html) };
+  const { doctype, synergetic } = normalizeSettings(doc.settings);
+  let html = serialize(inlined, doctype);
+  if (synergetic) html = applySynergetic(html, { doctype });
+  return {
+    html,
+    doctype,
+    doctypeLabel: DOCTYPES[doctype].label,
+    synergetic,
+    synergeticRules: synergetic ? SYNERGETIC_RULES.map((r) => r.id) : [],
+    bytes: Buffer.byteLength(html, 'utf8'),
+    warnings: lint(doc, html),
+  };
 }

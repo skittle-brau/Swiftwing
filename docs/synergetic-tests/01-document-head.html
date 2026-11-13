@@ -1,0 +1,49 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<!-- T1.1 meta tags -->
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="format-detection" content="telephone=no">
+<!-- T1.2 title -->
+<title>T1.2 Swiftwing test: document head</title>
+<!-- T1.3 style block with class rules (should colour T1.3 red) -->
+<style type="text/css">
+.t13-class { color: #c62828; font-weight: bold; }
+td.t13-td { background-color: #fff3cd; }
+/* T1.4 media query (T1.4 turns green below 600px wide) */
+@media only screen and (max-width: 600px) {
+  .t14-mobile { color: #2e7d32 !important; }
+}
+</style>
+<!-- T1.5 Outlook-only style and settings -->
+<!--[if mso]>
+<style type="text/css">
+.t15-mso { color: #6a1b9a !important; }
+</style>
+<xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+<![endif]-->
+</head>
+<!-- T1.6 body attributes -->
+<body class="t16-body" bgcolor="#f4f4f4" style="margin:0;padding:0;background-color:#f4f4f4;" leftmargin="0" topmargin="0" marginwidth="0" marginheight="0">
+<!-- T1.7 hidden preheader -->
+<div style="display:none;font-size:1px;line-height:1px;max-height:0;max-width:0;opacity:0;overflow:hidden;mso-hide:all;">T1.7 Hidden preheader text: should not be visible in the email body.</div>
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f4f4">
+<tr><td align="center" style="padding:20px 0;">
+<table width="600" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:600px;background-color:#ffffff;">
+<tr><td style="padding:20px 30px;font-family:Arial, Helvetica, sans-serif;font-size:16px;line-height:24px;color:#333333;">
+<p style="margin:0 0 12px 0;"><strong>Swiftwing test 01: document head</strong></p>
+<p style="margin:0 0 12px 0;">T1.1 Meta tags: check the saved HTML still has the four &lt;meta&gt; tags.</p>
+<p style="margin:0 0 12px 0;">T1.2 Title: check the &lt;title&gt; is kept.</p>
+<p class="t13-class" style="margin:0 0 12px 0;">T1.3 This line should be red and bold (from the &lt;style&gt; block).</p>
+<table width="100%" cellpadding="8" cellspacing="0" border="0"><tr><td class="t13-td" style="font-family:Arial, Helvetica, sans-serif;font-size:16px;">T1.3b This cell should have a pale yellow background (from the &lt;style&gt; block).</td></tr></table>
+<p class="t14-mobile" style="margin:12px 0;">T1.4 This line turns green on a phone (media query).</p>
+<p class="t15-mso" style="margin:0 0 12px 0;">T1.5 This line is purple only in Outlook desktop (conditional style).</p>
+<p style="margin:0;">T1.6 The page background around this box should be light grey (body bgcolor).</p>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
