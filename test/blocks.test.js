@@ -85,7 +85,10 @@ test('all new blocks export well-formed XHTML', (t) => {
   } catch {
     return t.skip('xmllint not available');
   }
-  const { html } = exp(['imageGroup', 'imageCard', 'imageText', 'boxedText'].map((type) => createBlock(type)));
+  const { html } = exp(
+    ['imageGroup', 'imageCard', 'imageText', 'boxedText'].map((type) => createBlock(type)),
+    { doctype: 'xhtml' }, // XML well-formedness only applies to XHTML output
+  );
   const dir = mkdtempSync(path.join(tmpdir(), 'swiftwing-'));
   writeFileSync(path.join(dir, 'blocks.html'), html);
   execFileSync('xmllint', ['--noout', '--nonet', path.join(dir, 'blocks.html')]);
