@@ -301,6 +301,69 @@ export const BLOCK_TYPES = {
     ],
   },
 
+  table: {
+    label: 'Table',
+    group: 'content',
+    icon: 'table',
+    defaults: () => ({
+      cells: [
+        ['<p>Event</p>', '<p>Date</p>', '<p>Location</p>'],
+        ['<p>Swimming carnival</p>', '<p>Friday 14 March</p>', '<p>Aquatic Centre</p>'],
+        ['<p>Parent evening</p>', '<p>Tuesday 25 March</p>', '<p>Library</p>'],
+      ],
+      headerRow: true,
+      borderStyle: 'all',
+      borderWidth: 1,
+      borderColor: '#d0d5dd',
+      cellPadding: 8,
+      headerBg: '#f1f3f6',
+      headerColor: '',
+      stripeBg: '',
+      fontSize: 14,
+      textAlign: 'left',
+      valign: 'top',
+      colWidths: 'equal',
+      bgColor: '',
+      paddingX: 30,
+      paddingY: 16,
+    }),
+    fields: [
+      { key: 'cells', label: 'Size', type: 'tablesize' },
+      { key: 'headerRow', label: 'First row is a header', type: 'checkbox' },
+      {
+        key: 'borderStyle',
+        label: 'Borders',
+        type: 'select',
+        options: [['all', 'All lines'], ['rows', 'Horizontal lines'], ['outer', 'Outline only'], ['none', 'No borders']],
+      },
+      {
+        row: [
+          { key: 'borderWidth', label: 'Border width', type: 'number', min: 1, max: 6, suffix: 'px' },
+          { key: 'cellPadding', label: 'Cell padding', type: 'number', min: 0, max: 30, suffix: 'px' },
+        ],
+      },
+      { key: 'borderColor', label: 'Border colour', type: 'color' },
+      { key: 'headerBg', label: 'Header background', type: 'color', allowEmpty: true },
+      { key: 'headerColor', label: 'Header text colour', type: 'color', allowEmpty: true },
+      { key: 'stripeBg', label: 'Alternate row colour', type: 'color', allowEmpty: true, help: 'Shades every second row. Leave empty for none.' },
+      {
+        row: [
+          { key: 'fontSize', label: 'Font size', type: 'number', min: 9, max: 24, suffix: 'px' },
+          { key: 'colWidths', label: 'Column widths', type: 'select', options: [['equal', 'Equal'], ['auto', 'Fit content']] },
+        ],
+      },
+      {
+        row: [
+          { key: 'textAlign', label: 'Text align', type: 'select', options: [['left', 'Left'], ['center', 'Center'], ['right', 'Right']] },
+          { key: 'valign', label: 'Vertical align', type: 'select', options: [['top', 'Top'], ['middle', 'Middle'], ['bottom', 'Bottom']] },
+        ],
+      },
+      { key: 'bgColor', label: 'Background', type: 'color', allowEmpty: true },
+      pad('paddingX', 'Horizontal padding'),
+      pad('paddingY', 'Vertical padding'),
+    ],
+  },
+
   html: {
     label: 'Raw HTML',
     group: 'content',

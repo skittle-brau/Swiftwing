@@ -3,7 +3,10 @@
  * document-wide email settings when nothing is selected.
  */
 import { BLOCK_TYPES, FONT_STACKS, SOCIAL_NETWORKS, getPath, setPath } from '/shared/blocks.js';
-import { color as normColor } from '/shared/render.js';
+import { color as normColor, normalizeCells } from '/shared/render.js';
+
+const MAX_TABLE_ROWS = 30;
+const MAX_TABLE_COLS = 8;
 import { datedProjectDir } from '/shared/paths.js';
 import { store } from './store.js';
 import { media } from './media.js';
@@ -125,6 +128,37 @@ function controlFor(field, value, commit) {
         ? h('button', { type: 'button', class: 'app-btn app-btn-sm app-btn-danger', onclick: () => commit('', { rerenderInspector: true }) }, 'Remove')
         : null;
       return h('div', { class: 'app-image-field' }, thumb, h('div', { class: 'app-image-buttons' }, choose, remove), url);
+    }
+    case 'tablesize': {
+      const rows = normalizeCells(value);
+      const make = (label, n, min, max) => {
+        const input = h('input', { class: 'app-input', type: 'number', min, max, step: 1, 'aria-label': label });
+        input.value = n;
+        return input;
+      };
+      const r = make('Rows', rows.length, 1, MAX_TABLE_ROWS);
+      const c = make('Columns', rows[0].length, 1, MAX_TABLE_COLS);
+      const apply = () => {
+        const nr = Math.min(MAX_TABLE_ROWS, Math.max(1, Math.round(Number(r.value) || 1)));
+        const nc = Math.min(MAX_TABLE_COLS, Math.max(1, Math.round(Number(c.value) || 1)));
+        // Keep existing cell contents; new cells start empty.
+        const next = Array.from({ length: nr }, (_, i) => Array.from({ length: nc }, (_, j) => rows[i]?.[j] ?? ''));
+        const lost = rows.some((row, i) => row.some((cell, j) => (i >= nr || j >= nc) && cell.replace(/<[^>]*>|&nbsp;|\s/g, '')));
+        if (lost && !confirm('Removing these rows or columns deletes the text in them. Continue?')) {
+          r.value = rows.length;
+          c.value = rows[0].length;
+          return;
+        }
+        commit(next, { rerenderInspector: true });
+      };
+      r.addEventListener('change', apply);
+      c.addEventListener('change', apply);
+      return h(
+        'div',
+        { class: 'app-row2' },
+        h('div', { class: 'app-input-suffix', 'data-suffix': 'rows' }, r),
+        h('div', { class: 'app-input-suffix', 'data-suffix': 'cols' }, c),
+      );
     }
     case 'social':
       return socialEditor(value || [], commit);
@@ -281,7 +315,7 @@ export function renderInspector() {
       if (extra.rerenderInspector) renderInspector();
     },
   );
-  if (['text', 'header', 'footer', 'columns2'].includes(block.type)) {
+  if (['text', 'header', 'footer', 'columns2', 'table'].includes(block.type)) {
     form.prepend(h('div', { class: 'app-info' }, 'Click the text in the canvas to edit it with the rich-text toolbar.'));
   }
 }

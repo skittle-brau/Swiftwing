@@ -103,6 +103,7 @@ const ICON_PATHS = {
   divider: '<path d="M3 13h26"/><path d="M7 7h18M7 19h18" opacity=".35" stroke-width="1.3"/>',
   spacer: '<path d="M16 4v18"/><path d="m12 8 4-4 4 4M12 18l4 4 4-4"/><path d="M4 4h24M4 22h24" opacity=".4"/>',
   social: '<circle cx="8" cy="13" r="4"/><circle cx="16" cy="13" r="4"/><circle cx="24" cy="13" r="4"/>',
+  table: '<rect x="3" y="3" width="26" height="20" rx="2"/><path d="M3 9.5h26M3 16h26M12 3v20M21 3v20" stroke-width="1.3"/>',
   code: '<path d="m11 7-6 6 6 6M21 7l6 6-6 6M18 5l-4 16"/>',
 };
 export function blockIcon(name) {
