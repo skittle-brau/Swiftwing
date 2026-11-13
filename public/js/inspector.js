@@ -75,7 +75,7 @@ function wrap(field, control) {
   );
 }
 
-function controlFor(field, value, commit) {
+function controlFor(field, value, commit, getLive = () => value) {
   const id = `f-${field.key}`;
   switch (field.type) {
     case 'number': {
@@ -174,6 +174,8 @@ function controlFor(field, value, commit) {
         h('div', { class: 'app-input-suffix', 'data-suffix': 'cols' }, c),
       );
     }
+    case 'list':
+      return listEditor(field, Array.isArray(value) ? value : [], commit, getLive);
     case 'social':
       return socialEditor(value || [], commit);
     case 'video': {
@@ -207,6 +209,49 @@ function controlFor(field, value, commit) {
       return input;
     }
   }
+}
+
+/**
+ * Editable list of items (images in a group, cards…). Each item's fields reuse
+ * the normal controls; adding, removing and reordering commit the whole array.
+ */
+function listEditor(field, items, commit, getLive) {
+  // Apply each change to the latest items (canvas edits may have changed them
+  // since this panel was drawn), then commit the whole list.
+  const change = (fn, rerender = false) => {
+    const live = (Array.isArray(getLive()) ? getLive() : items).map((it) => ({ ...it }));
+    fn(live);
+    commit(live, { rerenderInspector: rerender });
+  };
+  const list = items;
+  const wrapEl = h('div', { class: 'app-list' });
+  list.forEach((item, i) => {
+    const head = h(
+      'div',
+      { class: 'app-list-head' },
+      h('strong', {}, `${field.itemLabel || 'Item'} ${i + 1}`),
+      h(
+        'span',
+        {},
+        h('button', { type: 'button', class: 'app-icon-btn', title: 'Move up', 'aria-label': 'Move up', html: ICONS.up, disabled: i === 0, onclick: () => change((l) => { [l[i - 1], l[i]] = [l[i], l[i - 1]]; }, true) }),
+        h('button', { type: 'button', class: 'app-icon-btn', title: 'Move down', 'aria-label': 'Move down', html: ICONS.down, disabled: i === list.length - 1, onclick: () => change((l) => { [l[i + 1], l[i]] = [l[i], l[i + 1]]; }, true) }),
+        h('button', { type: 'button', class: 'app-icon-btn', title: 'Remove', 'aria-label': `Remove ${field.itemLabel || 'item'} ${i + 1}`, html: ICONS.trash, disabled: list.length <= 1, onclick: () => change((l) => { l.splice(i, 1); }, true) }),
+      ),
+    );
+    const box = h('div', { class: 'app-list-item' }, head);
+    for (const sub of field.itemFields) {
+      const subField = { ...sub, key: `${field.key}.${i}.${sub.key}` };
+      const commitSub = (v, extra = {}) => change((l) => { if (l[i]) l[i][sub.key] = v; }, !!extra.rerenderInspector);
+      box.append(wrap(subField, controlFor(subField, item[sub.key], commitSub)));
+    }
+    wrapEl.append(box);
+  });
+  if (list.length < (field.max || 12)) {
+    wrapEl.append(
+      h('button', { type: 'button', class: 'app-btn app-btn-sm', onclick: () => change((l) => { l.push(field.newItem()); }, true) }, `+ Add ${(field.itemLabel || 'item').toLowerCase()}`),
+    );
+  }
+  return wrapEl;
 }
 
 function socialEditor(items, commit) {
@@ -243,7 +288,11 @@ function socialEditor(items, commit) {
 function renderFields(form, fields, getValue, onCommit) {
   for (const field of fields) {
     // Fields that only apply to one choice of another field, e.g. pixel widths for "Fixed pixel widths".
-    if (field.showIf && String(getValue(field.showIf[0])) !== field.showIf[1]) continue;
+    if (field.showIf) {
+      const [key, want] = field.showIf;
+      const v = String(getValue(key));
+      if (Array.isArray(want) ? !want.includes(v) : v !== want) continue;
+    }
     if (field.type === 'divider') {
       form.append(h('div', { class: 'app-divider' }));
       continue;
@@ -255,7 +304,7 @@ function renderFields(form, fields, getValue, onCommit) {
       continue;
     }
     const commit = (v, extra = {}) => onCommit(field, v, extra);
-    form.append(wrap(field, controlFor(field, getValue(field.key), commit)));
+    form.append(wrap(field, controlFor(field, getValue(field.key), commit, () => getValue(field.key))));
   }
 }
 
@@ -336,7 +385,7 @@ export function renderInspector() {
       if (extra.rerenderInspector) renderInspector();
     },
   );
-  if (['text', 'header', 'footer', 'columns2', 'table'].includes(block.type)) {
+  if (['text', 'header', 'footer', 'columns2', 'table', 'imageCard', 'imageText', 'boxedText'].includes(block.type)) {
     form.prepend(h('div', { class: 'app-info' }, 'Click the text in the canvas to edit it with the rich-text toolbar.'));
   }
 }

@@ -84,7 +84,11 @@ swiftwing-user remove <username>             swiftwing-user list
 
 ### Drag-and-drop canvas
 - **Layouts:** Header, 1 Column, 2 Columns (50/50, 33/67, 67/33, stacking on mobile), Footer.
-- **Content:** Image, Video, Table, Button (bulletproof table button), Divider, Spacer, Social Links, Raw HTML.
+- **Content:** Image, Image Group, Image Card, Image + Text, Boxed Text, Video, Table, Button (bulletproof table button), Divider, Spacer, Social Links, Raw HTML.
+- **Image Group:** 2–4 images per row (up to 12), each with alt text, an optional link and caption. On phones they either stack or stay side by side at equal widths.
+- **Image Card:** 1–3 cards per row, each with an image, a title (edited on the canvas), a description and an optional button. Card background, border, corner radius, padding, title size/colour and button colours are adjustable. Cards stack on phones.
+- **Image + Text:** an image to the left or right of text (fixed image width), or above it. When the image is on the right, it still stacks above the text on phones.
+- **Boxed Text:** text in a highlighted box: bordered box, left accent bar, quote (accent bar and larger italic text) or background only.
 - **Table:** set the number of rows and columns (up to 30 × 8; cell text is kept when resizing), header row, borders (all lines, horizontal lines, outline only or none), border width and colour, cell padding, header colours, alternate row shading, font size, alignment, and equal or fit-to-content column widths. Click any cell to edit it with the rich-text toolbar. Exported with explicit `border`, `padding` and `bgcolor` on each cell so Outlook renders it the same.
 - **Video:** paste a YouTube or Vimeo link (watch, `youtu.be`, Shorts, live, embed, unlisted Vimeo links). The server fetches the video's thumbnail and title, draws a play button into the image (dark or light), saves it to the project's upload folder, and links the image to the video. The title becomes the alt text. Email clients can't play video, so this is the standard approach. The server needs outbound HTTPS to `www.youtube.com`, `i.ytimg.com`, `vimeo.com` and `i.vimeocdn.com`.
 - Drag blocks from the left sidebar onto the canvas, or click one to insert it after the current selection.

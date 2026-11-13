@@ -149,6 +149,10 @@ export function buildCss(doc, { includeResets = true } = {}) {
       rules.push(`${sel('.ae-rich p:last-child')}{margin-bottom:0;}`);
       rules.push(`${sel('.ae-th .ae-rich,.ae-th .ae-rich p')}{font-weight:bold;}`);
     }
+    if (b.type === 'boxedText' && p.variant === 'quote') {
+      const f = s.fontSize + 2;
+      rules.push(`${sel('.ae-rich p,.ae-rich li')}{font-style:italic;font-size:${f}px;line-height:${Math.round(f * 1.5)}px;}`);
+    }
     if (b.type === 'footer') {
       const f = num(p.fontSize, 9, 20, 12);
       const l = Math.round(f * 1.5);
@@ -168,6 +172,7 @@ export function buildCss(doc, { includeResets = true } = {}) {
       `.ae-pad{padding-left:16px !important;padding-right:16px !important;}` +
       `.ae-btn-full{width:100% !important;}` +
       `.ae-social-item{display:inline-block !important;padding-bottom:8px !important;}` +
+      `.ae-g2{width:50% !important;}.ae-g3{width:33% !important;}.ae-g4{width:25% !important;}` +
       `}`,
   );
   return rules.join('\n');
@@ -218,6 +223,54 @@ function imgTag({ src, alt, width, href, align = 'center', fluid = true }, ctx) 
   const link = safeUrl(href);
   if (link) tag = `<a href="${esc(link)}" target="_blank" style="text-decoration:none;">${tag}</a>`;
   return tag;
+}
+
+/**
+ * Lay items out in rows of `n` equal columns inside `inner` px, `gap` px apart.
+ * Full-width emails use percentage columns; images inside keep pixel sizes.
+ * `cell(item, index, widthPx)` renders one item.
+ */
+function renderGrid(ctx, { items, n, gap, inner, stack, cell }) {
+  const full = ctx.settings.fullWidth;
+  const w = Math.floor((inner - gap * (n - 1)) / n);
+  const pct = Math.floor(100 / n);
+  const tdW = full ? `${pct}%` : String(w);
+  const tdCss = full ? `${pct}%` : `${w}px`;
+  // On phones: stacked items go full width; otherwise each keeps an equal share.
+  const itemCls = stack ? 'ae-col' : `ae-gcell ae-g${n}`;
+  const gapTd = gap
+    ? `<td${stack ? ' class="ae-col-gap"' : ''} width="${gap}" style="width:${gap}px;font-size:0;line-height:0;">&nbsp;</td>`
+    : '';
+  const span = gap ? n * 2 - 1 : n;
+  const rows = [];
+  for (let start = 0; start < items.length; start += n) {
+    if (start && gap) {
+      rows.push(`<tr><td colspan="${span}" height="${gap}" style="height:${gap}px;font-size:0;line-height:0;">&nbsp;</td></tr>`);
+    }
+    const tds = [];
+    for (let i = 0; i < n; i++) {
+      const idx = start + i;
+      if (i) tds.push(gapTd);
+      const content = idx < items.length ? cell(items[idx], idx, w) : '&nbsp;';
+      tds.push(`<td class="${itemCls}" width="${tdW}" valign="top" style="width:${tdCss};">${content}</td>`);
+    }
+    rows.push(`<tr>${tds.join('')}</tr>`);
+  }
+  const open = full
+    ? `<table width="100%"${tableAttrs(ctx)} style="width:100%;">`
+    : `<table width="${inner}"${tableAttrs(ctx)} style="width:100%;max-width:${inner}px;">`;
+  return `${open}${rows.join('')}</table>`;
+}
+
+/** Small bulletproof button used inside cards. */
+function smallButton(ctx, { text, href, bg, fg, align = 'left' }) {
+  const s = ctx.settings;
+  return (
+    `<table${tableAttrs(ctx)} align="${align}" style="margin-top:14px;"><tr>` +
+    `<td align="center" bgcolor="${bg}" style="background-color:${bg};border-radius:4px;padding:9px 18px;mso-padding-alt:9px 18px;">` +
+    `<a href="${esc(safeUrl(href) || '#')}" target="_blank" style="color:${fg};text-decoration:none;font-family:${s.fontFamily};font-size:14px;line-height:18px;font-weight:bold;display:inline-block;">${esc(text)}</a>` +
+    `</td></tr></table>`
+  );
 }
 
 function placeholder(ctx, label, path, height = 160) {
@@ -490,6 +543,154 @@ const renderers = {
         ? `<div class="app-empty-inline">Add social links in the inspector →</div>`
         : '';
     return rowTable(b, ctx, `<td class="ae-pad" align="${a}" valign="top" style="${padStyle(px, py)}">${inner}</td>`, { bg });
+  },
+
+  imageGroup(b, ctx) {
+    const p = b.props;
+    const px = num(p.paddingX, 0, 80, 30);
+    const py = num(p.paddingY, 0, 80, 16);
+    const gap = num(p.gap, 0, 40, 10);
+    const n = num(p.perRow, 2, 4, 3);
+    const bg = color(p.bgColor);
+    const inner = ctx.settings.width - px * 2;
+    const items = (Array.isArray(p.images) ? p.images : []).filter(Boolean);
+    if (!items.length) return '';
+    const grid = renderGrid(ctx, {
+      items,
+      n,
+      gap,
+      inner,
+      stack: !!p.stackOnMobile,
+      cell: (it, i, w) => {
+        const img = it.src
+          ? imgTag({ src: it.src, alt: it.alt, width: w, href: it.href, align: 'center' }, ctx)
+          : placeholder(ctx, 'Image', `images.${i}.src`, Math.round(w * 0.66));
+        const cap = String(it.caption || '').trim()
+          ? `<div class="ae-cell" style="padding-top:6px;font-size:13px;line-height:18px;text-align:center;color:${ctx.settings.textColor};">${esc(it.caption)}</div>`
+          : '';
+        return img + cap || '&nbsp;';
+      },
+    });
+    return rowTable(b, ctx, `<td class="ae-pad" valign="top" style="${padStyle(px, py)}">${grid}</td>`, { bg });
+  },
+
+  imageCard(b, ctx) {
+    const p = b.props;
+    const s = ctx.settings;
+    const px = num(p.paddingX, 0, 80, 30);
+    const py = num(p.paddingY, 0, 80, 16);
+    const gap = num(p.gap, 0, 40, 20);
+    const n = num(p.perRow, 1, 3, 2);
+    const bg = color(p.bgColor);
+    const cardBg = color(p.cardBg, '#ffffff');
+    const bw = num(p.borderWidth, 0, 6, 1);
+    const border = bw ? `border:${bw}px solid ${color(p.borderColor, '#dfe3e8')};` : '';
+    const radius = num(p.radius, 0, 24, 6);
+    const cp = num(p.cardPadding, 0, 40, 16);
+    const ts = num(p.titleSize, 12, 32, 18);
+    const titleColor = color(p.titleColor, s.headingColor);
+    const btnBg = color(p.btnColor, '#1a5fb4');
+    const btnFg = color(p.btnTextColor, '#ffffff');
+    const inner = s.width - px * 2;
+    const cards = (Array.isArray(p.cards) ? p.cards : []).filter(Boolean);
+    if (!cards.length) return '';
+    const grid = renderGrid(ctx, {
+      items: cards,
+      n,
+      gap,
+      inner,
+      stack: true,
+      cell: (c, i, w) => {
+        const imgW = w - bw * 2;
+        const img = c.imageSrc
+          ? imgTag({ src: c.imageSrc, alt: c.imageAlt, width: imgW, href: c.imageHref, align: 'left' }, ctx)
+          : placeholder(ctx, 'Card image', `cards.${i}.imageSrc`, Math.round(imgW * 0.56));
+        const titleText = String(c.title || '');
+        const editAttr = ctx.editable ? ` data-ae-text="cards.${i}.title"` : '';
+        const title =
+          titleText || ctx.editable
+            ? `<h3 style="margin:0 0 8px 0;font-family:${s.fontFamily};font-size:${ts}px;line-height:${Math.round(ts * 1.3)}px;font-weight:bold;color:${titleColor};"><span${editAttr}>${esc(titleText)}</span></h3>`
+            : '';
+        const button = String(c.buttonText || '').trim() ? smallButton(ctx, { text: c.buttonText, href: c.buttonHref, bg: btnBg, fg: btnFg }) : '';
+        return (
+          `<table width="100%"${tableAttrs(ctx)} bgcolor="${cardBg}" style="width:100%;border-collapse:separate;background-color:${cardBg};${border}border-radius:${radius}px;">` +
+          (img ? `<tr><td style="padding:0;font-size:0;line-height:0;">${img}</td></tr>` : '') +
+          `<tr><td class="ae-cell" valign="top" style="padding:${cp}px;color:${s.textColor};">${title}${rich(c.html, `cards.${i}.html`, ctx)}${button}</td></tr>` +
+          `</table>`
+        );
+      },
+    });
+    return rowTable(b, ctx, `<td class="ae-pad" valign="top" style="${padStyle(px, py)}">${grid}</td>`, { bg });
+  },
+
+  imageText(b, ctx) {
+    const p = b.props;
+    const s = ctx.settings;
+    const px = num(p.paddingX, 0, 80, 30);
+    const py = num(p.paddingY, 0, 80, 20);
+    const bg = color(p.bgColor);
+    const inner = s.width - px * 2;
+    const pos = pick(p.imagePosition, ['left', 'right', 'top'], 'left');
+    const text = rich(p.html, 'html', ctx, `color:${s.textColor};`);
+
+    if (pos === 'top') {
+      const w = p.topImageWidth ? Math.min(num(p.topImageWidth, 1, 800, inner), inner) : inner;
+      const img = p.imageSrc
+        ? imgTag({ src: p.imageSrc, alt: p.imageAlt, width: w, href: p.imageHref, align: 'left' }, ctx)
+        : placeholder(ctx, 'Image', 'imageSrc', 180);
+      const space = img ? `<div style="height:14px;line-height:14px;font-size:14px;">&nbsp;</div>` : '';
+      return rowTable(b, ctx, `<td class="ae-cell ae-pad" valign="top" style="${padStyle(px, py)}color:${s.textColor};">${img}${space}${text}</td>`, { bg });
+    }
+
+    const gap = num(p.gap, 0, 60, 20);
+    const valign = pick(p.valign, ['top', 'middle', 'bottom'], 'top');
+    const imgW = Math.max(40, Math.min(num(p.imageWidth, 60, 500, 200), inner - gap - 100));
+    const textW = inner - gap - imgW;
+    const full = s.fullWidth;
+    const img = p.imageSrc
+      ? imgTag({ src: p.imageSrc, alt: p.imageAlt, width: imgW, href: p.imageHref, align: 'left' }, ctx)
+      : placeholder(ctx, 'Image', 'imageSrc', Math.round(imgW * 0.75));
+    // dir="rtl" puts the image on the right on desktop while keeping it first in
+    // the markup, so on phones it still stacks above the text.
+    const dir = pos === 'right' ? 'rtl' : 'ltr';
+    const open = full
+      ? `<table width="100%"${tableAttrs(ctx)} dir="${dir}" style="width:100%;">`
+      : `<table width="${inner}"${tableAttrs(ctx)} dir="${dir}" style="width:100%;max-width:${inner}px;">`;
+    const grid =
+      `${open}<tr>` +
+      `<td class="ae-col" width="${imgW}" valign="${valign}" dir="ltr" style="width:${imgW}px;">${img || '&nbsp;'}</td>` +
+      (gap ? `<td class="ae-col-gap" width="${gap}" style="width:${gap}px;font-size:0;line-height:0;">&nbsp;</td>` : '') +
+      `<td class="ae-col ae-cell"${full ? '' : ` width="${textW}"`} valign="${valign}" dir="ltr" style="${full ? '' : `width:${textW}px;`}text-align:left;color:${s.textColor};">${text}</td>` +
+      `</tr></table>`;
+    return rowTable(b, ctx, `<td class="ae-pad" valign="top" style="${padStyle(px, py)}">${grid}</td>`, { bg });
+  },
+
+  boxedText(b, ctx) {
+    const p = b.props;
+    const s = ctx.settings;
+    const px = num(p.paddingX, 0, 80, 30);
+    const py = num(p.paddingY, 0, 80, 16);
+    const bg = color(p.bgColor);
+    const variant = pick(p.variant, ['box', 'accent', 'quote', 'plain'], 'box');
+    const boxBg = color(p.boxBg);
+    const accent = color(p.accentColor, '#1a5fb4');
+    const bw = num(p.borderWidth, 1, 10, 1);
+    const radius = num(p.radius, 0, 24, 6);
+    const pad = num(p.boxPadding, 0, 50, 20);
+    const fg = color(p.textColor, s.textColor);
+    let border = '';
+    let corners = `border-radius:${radius}px;`;
+    if (variant === 'box') border = `border:${bw}px solid ${accent};`;
+    if (variant === 'accent' || variant === 'quote') {
+      // A 1px bar is hard to see; accent bars are at least 3px.
+      border = `border-left:${Math.max(3, bw)}px solid ${accent};`;
+      corners = radius ? `border-radius:0 ${radius}px ${radius}px 0;` : '';
+    }
+    const box =
+      `<table width="100%"${tableAttrs(ctx)} style="width:100%;border-collapse:separate;"><tr>` +
+      `<td class="ae-cell"${boxBg ? ` bgcolor="${boxBg}"` : ''} valign="top" style="${boxBg ? `background-color:${boxBg};` : ''}${border}${corners}padding:${pad}px;color:${fg};">` +
+      `${rich(p.html, 'html', ctx, `color:${fg};`)}</td></tr></table>`;
+    return rowTable(b, ctx, `<td class="ae-pad" valign="top" style="${padStyle(px, py)}">${box}</td>`, { bg });
   },
 
   table(b, ctx) {

@@ -100,6 +100,18 @@ export function lint(doc, html) {
     if (b.type === 'image' && p.src && !String(p.alt || '').trim()) warnings.push(`${n}: image is missing alt text.`);
     if (b.type === 'header' && p.logoSrc && !String(p.logoAlt || '').trim()) warnings.push(`${n}: logo is missing alt text.`);
     if (b.type === 'button' && (!p.href || p.href === '#')) warnings.push(`${n}: button has no link.`);
+    if (b.type === 'imageGroup') {
+      (p.images || []).forEach((it, k) => {
+        if (!it?.src) warnings.push(`${n}: image ${k + 1} has no picture yet.`);
+        else if (!String(it.alt || '').trim()) warnings.push(`${n}: image ${k + 1} is missing alt text.`);
+      });
+    }
+    if (b.type === 'imageCard') {
+      (p.cards || []).forEach((c, k) => {
+        if (c?.imageSrc && !String(c.imageAlt || '').trim()) warnings.push(`${n}: card ${k + 1} image is missing alt text.`);
+      });
+    }
+    if (b.type === 'imageText' && p.imageSrc && !String(p.imageAlt || '').trim()) warnings.push(`${n}: image is missing alt text.`);
     if (b.type === 'video' && !p.thumbnailSrc) warnings.push(`${n}: no video thumbnail yet — the block is omitted from the export.`);
     if (b.type === 'video' && p.thumbnailSrc && !String(p.url || '').trim()) warnings.push(`${n}: video image has no link.`);
     if (b.type === 'columns2') {
