@@ -322,3 +322,4 @@ svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; 
 .app-video-placeholder { background: #1f2937; border-color: #4b5563; color: #d1d5db; }
 .app-inline-form select { height: 34px; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: #fff; }
 .app-inline-form + .app-dialog-intro { margin-top: 10px; }
+.app-form-heading { margin: 8px 0 -4px; padding-top: 12px; border-top: 1px solid var(--border); }

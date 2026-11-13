@@ -82,13 +82,13 @@ test('lists and deletes uploads per project', async () => {
   assert.equal(del.status, 200);
 });
 
-test('export endpoint returns inlined XHTML with absolute image URLs', async () => {
+test('export endpoint returns inlined HTML with absolute image URLs', async () => {
   const doc = createDocument('Spring Gala');
   doc.blocks.unshift({ id: 'img1', type: 'image', props: { src: '/uploads/2026/11/Spring-Gala/hero-image.png', alt: 'Hero' } });
   const res = await api.fetch('/api/export', { method: 'POST', json: { doc } });
   assert.equal(res.status, 200);
   const { html, bytes, warnings } = await res.json();
-  assert.ok(html.startsWith('<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"'));
+  assert.ok(html.startsWith('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"'));
   assert.match(html, /src="https:\/\/mail\.example\.org\/uploads\/2026\/11\/Spring-Gala\/hero-image\.png"/);
   assert.ok(bytes > 0);
   assert.ok(Array.isArray(warnings));

@@ -3,7 +3,7 @@
  * document-wide email settings when nothing is selected.
  */
 import { BLOCK_TYPES, FONT_STACKS, SOCIAL_NETWORKS, getPath, setPath } from '/shared/blocks.js';
-import { color as normColor, normalizeCells } from '/shared/render.js';
+import { color as normColor, normalizeCells, DOCTYPES } from '/shared/render.js';
 
 const MAX_TABLE_ROWS = 30;
 const MAX_TABLE_COLS = 8;
@@ -55,11 +55,19 @@ const SETTINGS_FIELDS = [
     type: 'url',
     help: 'Prefix for uploaded images in the exported HTML. Must be publicly reachable by recipients. Leave blank to use this server.',
   },
+  { type: 'heading', label: 'Export' },
+  {
+    key: 'doctype',
+    label: 'Doctype',
+    type: 'select',
+    options: Object.entries(DOCTYPES).map(([k, d]) => [k, d.label]),
+    help: 'The HTML version of the exported email. HTML 4.01 Transitional suits most mailers; XHTML writes self-closing tags (<br />).',
+  },
   {
     key: 'strictXhtml',
-    label: 'Strict XHTML 1.0 Transitional',
+    label: 'Strict validation',
     type: 'checkbox',
-    help: 'Omits role="presentation" and VML namespaces, which the XHTML 1.0 DTD does not define.',
+    help: 'Leaves out markup the chosen doctype doesn’t define: role="presentation" (except in HTML5) and the Outlook VML/Office namespaces.',
   },
 ];
 
@@ -246,6 +254,10 @@ function renderFields(form, fields, getValue, onCommit) {
     if (field.showIf && String(getValue(field.showIf[0])) !== field.showIf[1]) continue;
     if (field.type === 'divider') {
       form.append(h('div', { class: 'app-divider' }));
+      continue;
+    }
+    if (field.type === 'heading') {
+      form.append(h('h3', { class: 'app-section-title app-form-heading' }, field.label));
       continue;
     }
     if (field.row) {

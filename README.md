@@ -1,6 +1,6 @@
 # Swiftwing
 
-A WYSIWYG, drag-and-drop HTML email editor. It exports **XHTML 1.0 Transitional**, **table-based** HTML with **all CSS inlined**, so the output can be pasted into Synergetic and other school or enterprise mailers and still render in Outlook desktop, Gmail and Apple Mail.
+A WYSIWYG, drag-and-drop HTML email editor. It exports **table-based** HTML (HTML 4.01 Transitional by default, or XHTML 1.0 Transitional or HTML5) with **all CSS inlined**, so the output can be pasted into Synergetic and other school or enterprise mailers and still render in Outlook desktop, Gmail and Apple Mail.
 
 ![Layout: block palette · canvas · inspector](https://img.shields.io/badge/stack-Node%2022%20·%20Express%205%20·%20TinyMCE%208%20·%20SortableJS%20·%20juice-1a3a5c)
 
@@ -129,14 +129,21 @@ TinyMCE is self-hosted from `node_modules`, so it needs no API key or CDN. It ru
 
 1. **Render.** The shared renderer (`shared/render.js`) outputs one fixed-width `<table>` per block. Every layout uses `table`/`tr`/`td` with `width=""` attributes and explicit pixel widths. It never uses flexbox, grid, floats or positioning. An Outlook "ghost table" in `<!--[if mso]>` comments locks the container width.
 2. **Inline CSS with [`juice`](https://github.com/Automattic/juice).** Class-based typography rules (`.ae-rich p`, `.ae-rich h2`, `.ae-rich a`, …) are written into `style="..."` attributes on each `td`, `p`, `li`, `a` and `span`. Only the `@media` block stays in `<head>`, so clients that support it can stack columns on mobile.
-3. **XHTML normalisation.** The exact `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" ...>` and `xmlns` are added. In the output:
-   - void tags are self-closed (`<br />`, `<img ... />`)
+3. **Doctype normalisation.** The output is written for the doctype chosen under **Export** in Email settings:
+
+   | Doctype | Declaration | `<html>` | Charset | Void tags |
+   |---|---|---|---|---|
+   | HTML 4.01 Transitional (default) | `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">` | `lang="en"` | `<meta http-equiv="Content-Type" …>` | `<br>` |
+   | XHTML 1.0 Transitional | `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" …>` | `xmlns`, `xml:lang`, `lang` | `<meta http-equiv="Content-Type" … />` | `<br />` |
+   | HTML5 | `<!DOCTYPE html>` | `lang="en"` | `<meta charset="UTF-8">` | `<br>` |
+
+   In every doctype:
    - attributes are lower-cased, quoted and not minimised (`nowrap="nowrap"`)
    - non-ASCII characters and named entities become numeric references (`&#160;`, `&#8220;`), so the output is 7-bit and survives any charset handling
    - MSO conditional comments are left untouched
 4. **Lint.** Warnings appear in the HTML source view for missing alt text, buttons without links, relative or localhost image URLs, and a message size over 102 KB (Gmail's clipping limit).
 
-**Strict XHTML 1.0 Transitional** is on by default in Email settings. In this mode the export leaves out `role="presentation"` and the VML/Office namespaces, because the XHTML 1.0 DTD doesn't define them. The output is also checked for well-formedness with `xmllint` in the test suite.
+**Strict validation** is on by default. It leaves out markup the chosen doctype doesn't define: `role="presentation"` (kept in HTML5, where it is valid) and the VML/Office namespaces. The test suite checks XHTML output with `xmllint` and HTML 4.01/HTML5 output with libxml2's HTML parser.
 
 ### Developer views
 - **Visual editor**: the canvas, using the same renderer and CSS as the export.
@@ -151,7 +158,7 @@ server/
   index.js            HTTP entry point
   app.js              Express app: API + static hosting
   cli.js              account management command
-  lib/exporter.js     render → juice → XHTML → lint
+  lib/exporter.js     render → juice → doctype serialisation → lint
   lib/uploads.js      upload storage into YYYY/MM/ProjectName, listing, safe paths
   lib/images.js       resize/compress uploads (sharp)
   lib/db.js           SQLite (node:sqlite) schema and migrations

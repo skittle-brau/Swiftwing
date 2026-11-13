@@ -47,11 +47,11 @@ function highlight(src) {
 async function refreshSource() {
   const meta = $('#source-meta');
   try {
-    const { html, bytes, warnings } = await getExport();
+    const { html, bytes, warnings, doctypeLabel } = await getExport();
     const code = $('#source-code code');
     code.innerHTML = highlight(html);
     const kb = (bytes / 1024).toFixed(1);
-    meta.innerHTML = `XHTML 1.0 Transitional · CSS inlined · <b>${kb} KB</b> · ${html.split('\n').length} lines`;
+    meta.innerHTML = `${doctypeLabel} · CSS inlined · <b>${kb} KB</b> · ${html.split('\n').length} lines`;
     const list = $('#source-warnings');
     list.hidden = !warnings.length;
     list.replaceChildren(...warnings.map((w) => Object.assign(document.createElement('li'), { textContent: w })));
