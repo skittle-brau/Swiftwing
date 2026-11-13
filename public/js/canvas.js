@@ -39,7 +39,7 @@ function blockShell(block, context) {
 
 function applyFrame() {
   const s = ctx().settings;
-  $('#canvas').style.width = s.width + 'px';
+  $('#canvas').style.width = s.fullWidth ? '100%' : s.width + 'px';
   $('#canvas').style.backgroundColor = s.contentBg;
   $('#canvas-bg').style.backgroundColor = s.bodyBg;
   $('#email-css').textContent = buildCss(store.doc, { includeResets: false }).replace(/@media[\s\S]*$/, '');

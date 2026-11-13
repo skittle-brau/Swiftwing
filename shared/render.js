@@ -71,6 +71,7 @@ export function normalizeSettings(raw = {}) {
     subject: String(s.subject ?? ''),
     preheader: String(s.preheader ?? ''),
     width: num(s.width, 320, 800, 600),
+    fullWidth: s.fullWidth === true,
     bodyBg: color(s.bodyBg, DEFAULT_SETTINGS.bodyBg),
     contentBg: color(s.contentBg, DEFAULT_SETTINGS.contentBg),
     fontFamily: fontStack(s.fontFamily),
@@ -110,8 +111,8 @@ export function buildCss(doc, { includeResets = true } = {}) {
 
   rules.push(
     `.ae-wrapper{width:100%;background-color:${s.bodyBg};}`,
-    `.ae-container{width:${s.width}px;background-color:${s.contentBg};}`,
-    `.ae-row{width:${s.width}px;}`,
+    `.ae-container{width:${s.fullWidth ? '100%' : `${s.width}px`};background-color:${s.contentBg};}`,
+    `.ae-row{width:${s.fullWidth ? '100%' : `${s.width}px`};}`,
     `.ae-cell{font-family:${F};font-size:${fs}px;line-height:${lh}px;color:${s.textColor};}`,
     `.ae-rich{font-family:${F};font-size:${fs}px;line-height:${lh}px;}`,
     `.ae-rich p{margin:0 0 16px 0;font-family:${F};font-size:${fs}px;line-height:${lh}px;}`,
@@ -180,10 +181,12 @@ function tableAttrs(ctx, extra = '') {
 }
 
 function rowTable(block, ctx, inner, { bg = '' } = {}) {
-  const W = ctx.settings.width;
+  const { width, fullWidth } = ctx.settings;
   const bgAttr = bg ? ` bgcolor="${bg}"` : '';
+  const w = fullWidth ? '100%' : String(width);
+  const cssW = fullWidth ? '100%' : `${width}px`;
   return (
-    `<table class="ae-row ae-b-${block.id}" width="${W}"${tableAttrs(ctx)}${bgAttr} style="width:${W}px;${bg ? `background-color:${bg};` : ''}">` +
+    `<table class="ae-row ae-b-${block.id}" width="${w}"${tableAttrs(ctx)}${bgAttr} style="width:${cssW};${bg ? `background-color:${bg};` : ''}">` +
     `<tr>${inner}</tr></table>`
   );
 }
@@ -274,25 +277,47 @@ const renderers = {
     const bg = color(p.bgColor);
     const valign = pick(p.valign, ['top', 'middle', 'bottom'], 'top');
     const inner = W - px * 2;
+    const fixed = p.ratio === 'fixed';
     const r = { 50: 0.5, 33: 1 / 3, 67: 2 / 3 }[p.ratio] ?? 0.5;
-    const leftW = Math.round((inner - gap) * r);
-    const widths = [leftW, inner - gap - leftW];
+    let widths;
+    if (fixed) {
+      // Exact pixel widths (e.g. a co-authored byline), scaled down only if they can't fit.
+      widths = [num(p.leftWidth, 40, 800, 220), num(p.rightWidth, 40, 800, 220)];
+      const room = inner - gap;
+      const total = widths[0] + widths[1];
+      if (total > room) widths = [Math.floor((widths[0] * room) / total), room - Math.floor((widths[0] * room) / total)];
+    } else {
+      const leftW = Math.round((inner - gap) * r);
+      widths = [leftW, inner - gap - leftW];
+    }
     const cols = (p.columns || []).slice(0, 2);
     while (cols.length < 2) cols.push({ html: '' });
 
+    // Full-width emails split proportional columns by percentage; fixed columns stay in pixels.
+    const full = ctx.settings.fullWidth && !fixed;
+    const leftPct = Math.round(r * 100);
+    const pcts = [leftPct, 100 - leftPct];
     const colTd = (c, i) => {
       const w = widths[i];
+      const tdW = full ? `${pcts[i]}%` : String(w);
+      const tdCss = full ? `${pcts[i]}%` : `${w}px`;
       const img = c.imageSrc
         ? imgTag({ src: c.imageSrc, alt: c.imageAlt, width: w, href: c.imageHref, align: 'left' }, ctx)
         : placeholder(ctx, 'Column image (optional)', `columns.${i}.imageSrc`, 90);
       const space = img && c.html ? `<div style="height:12px;line-height:12px;font-size:12px;">&nbsp;</div>` : '';
       return (
-        `<td class="ae-col ae-cell" width="${w}" valign="${valign}" style="width:${w}px;color:${ctx.settings.textColor};">` +
+        `<td class="ae-col ae-cell" width="${tdW}" valign="${valign}" style="width:${tdCss};color:${ctx.settings.textColor};">` +
         `${img}${space}${rich(c.html, `columns.${i}.html`, ctx)}</td>`
       );
     };
+    const gridW = widths[0] + widths[1] + gap;
+    const gridAlign = pick(p.gridAlign, ['left', 'center', 'right'], 'left');
     const grid =
-      `<table width="${inner}"${tableAttrs(ctx)} style="width:100%;max-width:${inner}px;"><tr>` +
+      (fixed
+        ? `<table width="${gridW}"${tableAttrs(ctx)} align="${gridAlign}" style="width:${gridW}px;max-width:100%;"><tr>`
+        : full
+          ? `<table width="100%"${tableAttrs(ctx)} style="width:100%;"><tr>`
+          : `<table width="${inner}"${tableAttrs(ctx)} style="width:100%;max-width:${inner}px;"><tr>`) +
       colTd(cols[0], 0) +
       (gap ? `<td class="ae-col-gap" width="${gap}" style="width:${gap}px;font-size:0;line-height:0;">&nbsp;</td>` : '') +
       colTd(cols[1], 1) +
@@ -586,17 +611,15 @@ table, td, div, p, a, span, li, h1, h2, h3 { font-family: ${s.fontFamily.replace
 <body class="ae-body" bgcolor="${s.bodyBg}" style="margin:0;padding:0;background-color:${s.bodyBg};">
 ${pre}<table class="ae-wrapper" width="100%"${tableAttrs(ctx)} bgcolor="${s.bodyBg}">
 <tr>
-<td align="center" valign="top" style="padding:20px 0 20px 0;">
-<!--[if mso]><table align="center" width="${W}" cellpadding="0" cellspacing="0" border="0"><tr><td width="${W}"><![endif]-->
-<table class="ae-container" width="${W}"${tableAttrs(ctx)} align="center" bgcolor="${s.contentBg}">
+<td align="center" valign="top" style="padding:${s.fullWidth ? '0' : '20px 0 20px 0'};">
+${s.fullWidth ? '' : `<!--[if mso]><table align="center" width="${W}" cellpadding="0" cellspacing="0" border="0"><tr><td width="${W}"><![endif]-->\n`}<table class="ae-container" width="${s.fullWidth ? '100%' : W}"${tableAttrs(ctx)} align="center" bgcolor="${s.contentBg}">
 <tr>
 <td align="left" valign="top">
 ${body}
 </td>
 </tr>
 </table>
-<!--[if mso]></td></tr></table><![endif]-->
-</td>
+${s.fullWidth ? '' : '<!--[if mso]></td></tr></table><![endif]-->\n'}</td>
 </tr>
 </table>
 </body>
