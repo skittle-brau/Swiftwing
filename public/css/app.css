@@ -246,6 +246,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; 
 .app-image-thumb { height: 90px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel-2) center / contain no-repeat; display: grid; place-items: center; color: var(--muted); font-size: 12px; }
 .app-image-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
 .app-divider { height: 1px; background: var(--border); margin: 2px 0; }
+.app-form-heading { margin: 8px 0 -4px; padding-top: 12px; border-top: 1px solid var(--border); }
 .app-social-list { display: flex; flex-direction: column; gap: 8px; }
 .app-social-item { display: grid; grid-template-columns: 1fr auto; gap: 6px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--panel-2); }
 .app-social-item .app-input { grid-column: 1 / -1; }
@@ -322,4 +323,3 @@ svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; 
 .app-video-placeholder { background: #1f2937; border-color: #4b5563; color: #d1d5db; }
 .app-inline-form select { height: 34px; padding: 0 8px; border: 1px solid var(--border-strong); border-radius: 6px; background: #fff; }
 .app-inline-form + .app-dialog-intro { margin-top: 10px; }
-.app-form-heading { margin: 8px 0 -4px; padding-top: 12px; border-top: 1px solid var(--border); }
