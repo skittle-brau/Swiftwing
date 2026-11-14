@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -10,6 +10,7 @@ import { createDocument, createBlock, BLOCK_TYPES } from '../shared/blocks.js';
 function docWithEverything() {
   const doc = createDocument('Test Project');
   doc.settings.subject = 'Weekly Bulletin';
+  doc.settings.doctype = 'xhtml'; // most checks below are XHTML-specific; HTML 4.01 / HTML5 are tested at the end
   doc.settings.preheader = 'This week at school';
   doc.blocks.push(
     createBlock('image', { src: '/uploads/2026/11/Test-Project/hero.png', alt: 'Hero', href: 'https://example.com' }),
@@ -187,4 +188,64 @@ test('two columns with fixed pixel widths (e.g. a co-authored byline)', () => {
   doc.blocks[0].props.rightWidth = 600;
   const cols = [...exportEmail(doc).html.matchAll(/<td class="ae-col ae-cell" width="(\d+)"/g)].map((m) => Number(m[1]));
   assert.equal(cols[0] + cols[1], 520);
+});
+
+/* --------------------------------------------------------------- doctypes */
+
+test('HTML 4.01 Transitional is the default doctype', () => {
+  const doc = docWithEverything();
+  delete doc.settings.doctype;
+  const { html, doctype, doctypeLabel } = exportEmail(doc);
+  assert.equal(doctype, 'html4');
+  assert.equal(doctypeLabel, 'HTML 4.01 Transitional');
+  assert.ok(html.startsWith('<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">\n<html lang="en">'));
+  assert.match(html, /<meta http-equiv="Content-Type" content="text\/html; charset=UTF-8">/);
+  assert.match(html, /<style type="text\/css">/);
+  // No XHTML-only syntax.
+  assert.doesNotMatch(html, /xmlns=|xml:lang/);
+  assert.doesNotMatch(html.replace(/<!--[\s\S]*?-->/g, ''), /\/>/);
+  assert.match(html, /<br>/);
+  assert.match(html, /<img [^>]*alt="Hero"[^>]*>/);
+  // Still 7-bit, still inlined, still no ARIA role (not in HTML 4.01).
+  assert.doesNotMatch(html, /[^\x00-\x7f]/);
+  assert.match(html, /Caf&#233;/);
+  assert.doesNotMatch(html, /role="presentation"/);
+});
+
+test('HTML5 output', () => {
+  const doc = docWithEverything();
+  doc.settings.doctype = 'html5';
+  const { html } = exportEmail(doc);
+  assert.ok(html.startsWith('<!DOCTYPE html>\n<html lang="en">'));
+  assert.match(html, /<meta charset="UTF-8">/);
+  assert.match(html, /<style>\n@media/);
+  assert.doesNotMatch(html, /http-equiv="Content-Type"/);
+  assert.doesNotMatch(html.replace(/<!--[\s\S]*?-->/g, ''), /\/>/);
+  // role="presentation" is valid HTML5, so it's kept even in strict mode.
+  assert.match(html, /<table class="ae-container"[^>]* role="presentation"/);
+});
+
+test('unknown doctypes fall back to HTML 4.01', () => {
+  const doc = docWithEverything();
+  doc.settings.doctype = 'html3';
+  assert.equal(exportEmail(doc).doctype, 'html4');
+});
+
+test('HTML 4.01 and HTML5 output parse cleanly as HTML (when xmllint is installed)', (t) => {
+  try {
+    execFileSync('xmllint', ['--version'], { stdio: 'ignore' });
+  } catch {
+    return t.skip('xmllint not available');
+  }
+  const dir = mkdtempSync(path.join(tmpdir(), 'swiftwing-'));
+  for (const doctype of ['html4', 'html5']) {
+    const doc = docWithEverything();
+    doc.settings.doctype = doctype;
+    const file = path.join(dir, `${doctype}.html`);
+    writeFileSync(file, exportEmail(doc).html);
+    // libxml2's HTML parser reports problems (unclosed or misnested tags) on stderr
+    // but exits 0, so check stderr rather than the exit code.
+    const { stderr } = spawnSync('xmllint', ['--html', '--noout', file], { encoding: 'utf8' });
+    assert.equal(stderr, '', `${doctype}: ${stderr}`);
+  }
 });

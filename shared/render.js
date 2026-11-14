@@ -12,6 +12,17 @@ import { BLOCK_TYPES, DEFAULT_SETTINGS, SOCIAL_NETWORKS, FONT_STACKS } from './b
 export const XHTML_DOCTYPE =
   '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">';
 
+/** Doctypes the export can target. `selfClose`: write void tags as <br /> (XHTML) or <br> (HTML). */
+export const DOCTYPES = {
+  html4: {
+    label: 'HTML 4.01 Transitional',
+    declaration: '<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">',
+    selfClose: false,
+  },
+  xhtml: { label: 'XHTML 1.0 Transitional', declaration: XHTML_DOCTYPE, selfClose: true },
+  html5: { label: 'HTML5', declaration: '<!DOCTYPE html>', selfClose: false },
+};
+
 /* ---------------------------------------------------------------- helpers */
 
 export function esc(v) {
@@ -81,6 +92,7 @@ export function normalizeSettings(raw = {}) {
     headingColor: color(s.headingColor, DEFAULT_SETTINGS.headingColor),
     linkColor: color(s.linkColor, DEFAULT_SETTINGS.linkColor),
     assetBaseUrl: String(s.assetBaseUrl ?? '').trim(),
+    doctype: Object.hasOwn(DOCTYPES, s.doctype) ? s.doctype : 'html4',
     strictXhtml: s.strictXhtml !== false,
   };
 }
@@ -181,7 +193,8 @@ export function buildCss(doc, { includeResets = true } = {}) {
 /* ------------------------------------------------------------ primitives */
 
 function tableAttrs(ctx, extra = '') {
-  const role = ctx.settings.strictXhtml ? '' : ' role="presentation"';
+  // role="presentation" is valid in HTML5; HTML 4.01 and XHTML 1.0 don't define it.
+  const role = ctx.settings.strictXhtml && ctx.settings.doctype !== 'html5' ? '' : ' role="presentation"';
   return `${role} cellpadding="0" cellspacing="0" border="0"${extra}`;
 }
 
@@ -791,15 +804,27 @@ export function renderEmailDocument(doc, opts = {}) {
     ? `<div class="ae-preheader">${esc(s.preheader)}${'&#847;&#160;'.repeat(40)}</div>\n`
     : '';
 
-  return `${XHTML_DOCTYPE}
-<html xmlns="http://www.w3.org/1999/xhtml"${ns} xml:lang="en" lang="en">
+  const dt = DOCTYPES[s.doctype];
+  const htmlTag =
+    s.doctype === 'xhtml'
+      ? `<html xmlns="http://www.w3.org/1999/xhtml"${ns} xml:lang="en" lang="en">`
+      : `<html lang="en"${ns}>`;
+  const charset =
+    s.doctype === 'html5'
+      ? '<meta charset="UTF-8" />'
+      : '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />';
+  // HTML 4.01 and XHTML 1.0 require type="text/css"; HTML5 doesn't need it.
+  const styleOpen = s.doctype === 'html5' ? '<style>' : '<style type="text/css">';
+
+  return `${dt.declaration}
+${htmlTag}
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+${charset}
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 <meta name="format-detection" content="telephone=no" />
 <title>${esc(s.subject || s.projectName)}</title>
-<style type="text/css">
+${styleOpen}
 ${buildCss(doc)}
 </style>
 <!--[if mso]>

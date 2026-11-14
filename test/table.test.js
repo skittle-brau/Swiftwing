@@ -8,8 +8,9 @@ import { exportEmail } from '../server/lib/exporter.js';
 import { createDocument, createBlock } from '../shared/blocks.js';
 import { normalizeCells } from '../shared/render.js';
 
-const docWith = (props) => {
+const docWith = (props, doctype = 'xhtml') => {
   const doc = createDocument('Table');
+  doc.settings.doctype = doctype;
   doc.blocks = [createBlock('table', props)];
   return exportEmail(doc).html;
 };

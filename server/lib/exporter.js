@@ -1,18 +1,19 @@
 /**
- * Export engine: document JSON → Synergetic-ready XHTML 1.0 Transitional.
+ * Export engine: document JSON → email HTML in the chosen doctype
+ * (HTML 4.01 Transitional by default, XHTML 1.0 Transitional or HTML5).
  *
  * Pipeline
  *   1. renderEmailDocument()  table-based markup + class-based <style>
  *   2. juice                  inline every CSS rule into style="" attributes,
  *                             keeping only @media rules in <head>
- *   3. toXhtml()              self-close void elements, expand boolean attrs,
+ *   3. serialize()            void elements per doctype, expand boolean attrs,
  *                             convert all non-ASCII / named entities to numeric
  *                             references (survives any charset mangling)
  *   4. lint()                 warnings for the UI (alt text, sizes, URLs…)
  */
 import juice from 'juice';
 import { decodeHTML } from 'entities';
-import { renderEmailDocument, XHTML_DOCTYPE, normalizeSettings } from '../../shared/render.js';
+import { renderEmailDocument, DOCTYPES, normalizeSettings } from '../../shared/render.js';
 import { normalizeDocument } from '../../shared/blocks.js';
 
 const VOID_TAGS = ['area', 'base', 'br', 'col', 'hr', 'img', 'input', 'link', 'meta', 'param'];
@@ -44,8 +45,11 @@ const TAG_RE = new RegExp(String.raw`<([a-zA-Z][\w:-]*)${ATTRS}\s*(/?)>`, 'g');
 const ATTR_RE = /\s+([^\s=/>]+)(?:\s*=\s*("[^"]*"|'[^']*'|[^\s>]+))?/g;
 const VOID_CLOSE_RE = new RegExp(String.raw`</(${VOID_TAGS.join('|')})\s*>`, 'gi');
 
-/** Rebuild a start tag as XHTML: lowercase names, quoted values, no minimised attributes. */
-function xhtmlTag(_m, name, attrs) {
+/**
+ * Rebuild a start tag: lowercase names, quoted values, no minimised attributes.
+ * Void elements end in " />" for XHTML and plain ">" for HTML 4.01 / HTML5.
+ */
+function normalizeTag(name, attrs, selfClose) {
   const tag = name.toLowerCase();
   const out = [];
   for (const [, rawName, rawVal] of attrs.matchAll(ATTR_RE)) {
@@ -63,11 +67,15 @@ function xhtmlTag(_m, name, attrs) {
     if (BOOLEAN_ATTRS.includes(attr) && !val) val = attr;
     out.push(` ${attr}="${val}"`);
   }
-  return `<${tag}${out.join('')}${VOID_TAGS.includes(tag) ? ' /' : ''}>`;
+  return `<${tag}${out.join('')}${selfClose && VOID_TAGS.includes(tag) ? ' /' : ''}>`;
 }
 
-export function toXhtml(html) {
-  let out = mapOutsideComments(html, (seg) => seg.replace(VOID_CLOSE_RE, '').replace(TAG_RE, xhtmlTag));
+/** Serialize inlined HTML for the chosen doctype (html4 | xhtml | html5). */
+export function serialize(html, doctype = 'html4') {
+  const dt = DOCTYPES[doctype] || DOCTYPES.html4;
+  let out = mapOutsideComments(html, (seg) =>
+    seg.replace(VOID_CLOSE_RE, '').replace(TAG_RE, (_m, name, attrs) => normalizeTag(name, attrs, dt.selfClose)),
+  );
 
   // Named entities (other than the XML built-ins) → numeric references.
   out = out.replace(/&([a-zA-Z][a-zA-Z0-9]{1,31});/g, (m, name) => {
@@ -84,9 +92,14 @@ export function toXhtml(html) {
   // Non-ASCII characters → numeric references (7-bit safe output).
   out = out.replace(/[^\x00-\x7f]/gu, (ch) => `&#${ch.codePointAt(0)};`);
 
-  // Guarantee the exact XHTML 1.0 Transitional doctype.
+  // Guarantee the exact doctype declaration.
   out = out.replace(/^\s*<!doctype[^>]*>/i, '');
-  return `${XHTML_DOCTYPE}\n${out.trimStart()}`;
+  return `${dt.declaration}\n${out.trimStart()}`;
+}
+
+/** XHTML 1.0 Transitional serialization (kept for callers and tests). */
+export function toXhtml(html) {
+  return serialize(html, 'xhtml');
 }
 
 /** Collect editor-facing warnings about the exported document. */
@@ -144,6 +157,7 @@ export function exportEmail(rawDoc, opts = {}) {
   const baseUrl = (doc.settings.assetBaseUrl || opts.baseUrl || '').trim();
   const source = renderEmailDocument(doc, { baseUrl });
   const inlined = juice(source, JUICE_OPTIONS);
-  const html = toXhtml(inlined);
-  return { html, bytes: Buffer.byteLength(html, 'utf8'), warnings: lint(doc, html) };
+  const { doctype } = normalizeSettings(doc.settings);
+  const html = serialize(inlined, doctype);
+  return { html, doctype, doctypeLabel: DOCTYPES[doctype].label, bytes: Buffer.byteLength(html, 'utf8'), warnings: lint(doc, html) };
 }
