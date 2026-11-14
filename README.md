@@ -126,6 +126,8 @@ TinyMCE is self-hosted from `node_modules`, so it needs no API key or CDN. It ru
   - WebP is converted to JPEG, or to PNG if it has transparency, because Outlook desktop can't display WebP.
   - Animated GIFs keep their animation.
   - Files are checked by their actual content, not the type the browser claims. Only PNG, JPEG, GIF and WebP are accepted.
+- **Media → All projects** shows a folder tree matching the storage layout (year → month → project) with image counts and sizes at each level. Open a project to see, insert or drag its images. Months more than two years old are labelled **Over 2 years**. The image picker has the same tree for browsing other projects.
+- **Purging:** admins can delete a whole project, month or year from the tree. The confirmation shows how many images and how much space will be freed, lists the projects affected and any saved templates that use those images, and for a month or year asks for the folder name (e.g. `2026/11`) to be typed. Empty month and year folders are removed afterwards, and each purge is logged to the service log. Editors can still delete single images.
 - Drag a library image onto the canvas to insert it. Each library image also has buttons to insert it, copy its absolute URL, or delete it.
 
 ### Export engine (Synergetic / Outlook safe)
@@ -198,6 +200,10 @@ The editor and the exporter share one renderer, so what you see on the canvas is
 | `POST /api/uploads?project=Name` | multipart field `files` (up to 10). Returns `{ directory: "2026/11/Name", files: [{ url, path, name, size, ... }] }` |
 | `GET /api/uploads[?project=Name]` | Lists images, newest first |
 | `DELETE /api/uploads?path=YYYY/MM/Name/file.png` | Deletes one image |
+| `GET /api/uploads/tree` | Folder tree: years → months → projects, with counts, sizes and age in months |
+| `GET /api/uploads?folder=YYYY/MM/Name` | Images in one project folder |
+| `GET /api/uploads/folder?path=YYYY[/MM[/Name]]` | What purging a folder would delete, and which templates use its images |
+| `DELETE /api/uploads/folder?path=…&confirm=…` | Purge a project, month or year folder (admins; `confirm` must repeat the path) |
 | `POST /api/export` | Body `{ doc }`. Returns `{ html, bytes, warnings }`. Add `?download&filename=x.html` to get an attachment instead |
 | `GET /api/config` | Effective public base URL |
 | `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/me` · `POST /api/auth/password` | Session login/logout, current user, change own password |

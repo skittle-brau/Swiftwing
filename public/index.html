@@ -75,6 +75,7 @@
           <label><input type="radio" name="media-scope" value="all" /> All projects</label>
         </div>
         <div class="app-media-grid" id="media-grid"></div>
+        <div class="app-tree" id="media-tree" hidden></div>
         <p class="app-hint">Drag an image onto the canvas to add an Image block.</p>
       </section>
     </aside>
@@ -147,7 +148,12 @@
           <strong>Upload new image</strong>
           <small>or drop files here · saved to <code class="js-target-path"></code></small>
         </label>
+        <div class="app-media-filter">
+          <label><input type="radio" name="picker-scope" value="project" checked /> This project</label>
+          <label><input type="radio" name="picker-scope" value="all" /> All projects</label>
+        </div>
         <div class="app-media-grid app-media-grid-lg" id="picker-grid"></div>
+        <div class="app-tree app-tree-lg" id="picker-tree" hidden></div>
       </div>
     </div>
   </div>

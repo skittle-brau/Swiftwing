@@ -31,6 +31,11 @@ export const api = {
   },
 
   deleteUpload: (path) => send('DELETE', `/api/uploads?path=${encodeURIComponent(path)}`),
+  uploadTree: () => fetch('/api/uploads/tree').then(json),
+  listFolder: (folder) => fetch(`/api/uploads?folder=${encodeURIComponent(folder)}`).then(json),
+  folderSummary: (folder) => fetch(`/api/uploads/folder?path=${encodeURIComponent(folder)}`).then(json),
+  deleteFolder: (folder) =>
+    send('DELETE', `/api/uploads/folder?path=${encodeURIComponent(folder)}&confirm=${encodeURIComponent(folder)}`),
 
   // Account
   me: () => fetch('/api/auth/me').then(json),

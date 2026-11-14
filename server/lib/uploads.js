@@ -131,8 +131,35 @@ export function describeFile(uploadRoot, absPath, stat) {
   };
 }
 
-/** List images, newest first. Optional project filter (sanitised name). */
-export async function listUploads(uploadRoot, { project } = {}) {
+/** A year, year/month or year/month/project folder inside the upload root. */
+export const FOLDER_RE = /^\d{4}(?:\/\d{2}(?:\/[A-Za-z0-9_-]{1,64})?)?$/;
+
+const readDir = async (dir) => {
+  try {
+    return await fs.readdir(dir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+};
+
+/**
+ * List images, newest first.
+ * @param {{project?: string, folder?: string}} [filter]
+ *   project: every YYYY/MM/<project> folder for that project name
+ *   folder:  one YYYY/MM/<project> folder
+ */
+export async function listUploads(uploadRoot, { project, folder } = {}) {
+  if (folder) {
+    if (!FOLDER_RE.test(folder) || folder.split('/').length !== 3) return [];
+    const dir = resolveInside(uploadRoot, folder);
+    const out = [];
+    for (const f of await readDir(dir)) {
+      if (!f.isFile() || !IMAGE_EXT.has(path.extname(f.name).toLowerCase())) continue;
+      const abs = path.join(dir, f.name);
+      out.push(describeFile(uploadRoot, abs, await fs.stat(abs)));
+    }
+    return out.sort((a, b) => b.modified.localeCompare(a.modified));
+  }
   const wanted = project ? sanitizeProjectName(project) : null;
   const out = [];
   const read = async (dir) => {
@@ -158,6 +185,95 @@ export async function listUploads(uploadRoot, { project } = {}) {
     }
   }
   return out.sort((a, b) => b.modified.localeCompare(a.modified));
+}
+
+/**
+ * Folder tree of uploads: years → months → projects, newest first, with
+ * image counts, total bytes and the latest change at every level.
+ * `ageMonths` on each month counts whole months back from `now`.
+ */
+export async function uploadTree(uploadRoot, now = new Date()) {
+  const years = [];
+  const sum = (items) => ({
+    files: items.reduce((a, x) => a + x.files, 0),
+    bytes: items.reduce((a, x) => a + x.bytes, 0),
+    latest: items.reduce((a, x) => (x.latest > a ? x.latest : a), ''),
+  });
+  for (const y of await readDir(uploadRoot)) {
+    if (!y.isDirectory() || !/^\d{4}$/.test(y.name)) continue;
+    const months = [];
+    for (const m of await readDir(path.join(uploadRoot, y.name))) {
+      if (!m.isDirectory() || !/^\d{2}$/.test(m.name)) continue;
+      const projects = [];
+      for (const p of await readDir(path.join(uploadRoot, y.name, m.name))) {
+        if (!p.isDirectory()) continue;
+        const dir = path.join(uploadRoot, y.name, m.name, p.name);
+        let files = 0;
+        let bytes = 0;
+        let latest = '';
+        for (const f of await readDir(dir)) {
+          if (!f.isFile() || !IMAGE_EXT.has(path.extname(f.name).toLowerCase())) continue;
+          const st = await fs.stat(path.join(dir, f.name));
+          files++;
+          bytes += st.size;
+          const iso = st.mtime.toISOString();
+          if (iso > latest) latest = iso;
+        }
+        projects.push({ name: p.name, path: `${y.name}/${m.name}/${p.name}`, files, bytes, latest });
+      }
+      projects.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
+      const ageMonths = (now.getFullYear() - Number(y.name)) * 12 + (now.getMonth() + 1 - Number(m.name));
+      months.push({ month: m.name, path: `${y.name}/${m.name}`, ageMonths, ...sum(projects), projects });
+    }
+    months.sort((a, b) => b.month.localeCompare(a.month));
+    years.push({ year: y.name, path: y.name, ...sum(months), months });
+  }
+  years.sort((a, b) => b.year.localeCompare(a.year));
+  return years;
+}
+
+/** Count the images and bytes in a year, month or project folder. */
+export async function folderSummary(uploadRoot, rel) {
+  if (!FOLDER_RE.test(rel)) return null;
+  const root = resolveInside(uploadRoot, rel);
+  let files = 0;
+  let bytes = 0;
+  const projects = new Set();
+  const walk = async (dir) => {
+    for (const e of await readDir(dir)) {
+      const abs = path.join(dir, e.name);
+      if (e.isDirectory()) await walk(abs);
+      else if (e.isFile()) {
+        files++;
+        bytes += (await fs.stat(abs)).size;
+        projects.add(path.relative(uploadRoot, dir).split(path.sep).join('/'));
+      }
+    }
+  };
+  try {
+    await fs.access(root);
+  } catch {
+    return null;
+  }
+  await walk(root);
+  return { path: rel, files, bytes, projects: [...projects].sort() };
+}
+
+/**
+ * Permanently delete a year, month or project folder, then remove any month
+ * or year folders left empty. Returns what was deleted, or null if missing.
+ */
+export async function deleteFolder(uploadRoot, rel) {
+  const summary = await folderSummary(uploadRoot, rel);
+  if (!summary) return null;
+  await fs.rm(resolveInside(uploadRoot, rel), { recursive: true, force: true });
+  const parts = rel.split('/');
+  for (let i = parts.length - 1; i > 0; i--) {
+    const parent = resolveInside(uploadRoot, parts.slice(0, i).join('/'));
+    if ((await readDir(parent)).length) break;
+    await fs.rmdir(parent).catch(() => {});
+  }
+  return summary;
 }
 
 export function ensureDir(dir) {
