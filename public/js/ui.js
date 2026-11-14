@@ -103,6 +103,10 @@ const ICON_PATHS = {
   divider: '<path d="M3 13h26"/><path d="M7 7h18M7 19h18" opacity=".35" stroke-width="1.3"/>',
   spacer: '<path d="M16 4v18"/><path d="m12 8 4-4 4 4M12 18l4 4 4-4"/><path d="M4 4h24M4 22h24" opacity=".4"/>',
   social: '<circle cx="8" cy="13" r="4"/><circle cx="16" cy="13" r="4"/><circle cx="24" cy="13" r="4"/>',
+  gallery: '<rect x="2" y="6" width="8" height="12" rx="1"/><rect x="12" y="6" width="8" height="12" rx="1"/><rect x="22" y="6" width="8" height="12" rx="1"/><path d="m3 16 3-3 3 3M13 16l3-3 3 3M23 16l3-3 3 3" stroke-width="1.2"/>',
+  card: '<rect x="7" y="2" width="18" height="22" rx="2"/><rect x="7" y="2" width="18" height="9" rx="2" fill="currentColor" stroke="none" opacity=".25"/><path d="M10 15h12M10 19h8" stroke-width="1.3"/>',
+  imagetext: '<rect x="3" y="5" width="12" height="16" rx="1.5"/><path d="m4 18 4-4 3 3 3-2" stroke-width="1.2"/><path d="M18 8h11M18 12h11M18 16h8" stroke-width="1.3"/>',
+  boxed: '<rect x="3" y="4" width="26" height="18" rx="3" fill="currentColor" opacity=".15" stroke="none"/><path d="M5 4v18" stroke-width="3"/><path d="M10 10h15M10 15h11" stroke-width="1.3"/>',
   table: '<rect x="3" y="3" width="26" height="20" rx="2"/><path d="M3 9.5h26M3 16h26M12 3v20M21 3v20" stroke-width="1.3"/>',
   code: '<path d="m11 7-6 6 6 6M21 7l6 6-6 6M18 5l-4 16"/>',
 };
