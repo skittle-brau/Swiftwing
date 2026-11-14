@@ -93,6 +93,7 @@ export function normalizeSettings(raw = {}) {
     linkColor: color(s.linkColor, DEFAULT_SETTINGS.linkColor),
     assetBaseUrl: String(s.assetBaseUrl ?? '').trim(),
     doctype: Object.hasOwn(DOCTYPES, s.doctype) ? s.doctype : 'html4',
+    synergetic: s.synergetic === true,
     strictXhtml: s.strictXhtml !== false,
   };
 }

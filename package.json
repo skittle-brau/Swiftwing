@@ -8,7 +8,9 @@
     "start": "node --env-file-if-exists=.env server/index.js",
     "dev": "node --env-file-if-exists=.env --watch server/index.js",
     "test": "node --test test/*.test.js",
-    "user": "node --env-file-if-exists=.env server/cli.js user"
+    "user": "node --env-file-if-exists=.env server/cli.js user",
+    "synergetic-tests": "node scripts/build-synergetic-tests.js",
+    "synergetic-compare": "node scripts/synergetic-compare.js"
   },
   "engines": {
     "node": ">=22.13"

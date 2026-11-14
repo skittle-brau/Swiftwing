@@ -1,0 +1,37 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Swiftwing test 06: characters and merge fields</title>
+</head>
+<body style="margin:0;padding:0;">
+<table width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:600px;">
+<tr><td style="padding:20px 30px;font-family:Arial, Helvetica, sans-serif;font-size:16px;line-height:24px;color:#333333;">
+<p style="margin:0 0 16px 0;"><strong>Swiftwing test 06: characters and merge fields</strong></p>
+<p style="margin:0 0 8px 0;">T6.1 Named entities: &amp; &lt; &gt; &quot; &copy; &reg; &trade; &mdash; &ndash; &hellip; &bull; &middot; &deg; &frac12; &euro; &pound;</p>
+<p style="margin:0 0 8px 0;">T6.2 Curly quotes as entities: &lsquo;single&rsquo; &ldquo;double&rdquo; it&rsquo;s</p>
+<p style="margin:0 0 8px 0;">T6.3 Numeric entities: &#169; &#8212; &#8220;quoted&#8221; &#233; &#x2713;</p>
+<p style="margin:0 0 8px 0;">T6.4 Raw UTF-8 characters: café, naïve, Zürich, São Paulo, — – … “quoted” ‘single’ it’s</p>
+<p style="margin:0 0 8px 0;">T6.5 Te reo / macrons (raw): Māori, Ōtautahi, whānau. As entities: M&#257;ori, wh&#257;nau</p>
+<p style="margin:0 0 8px 0;">T6.6 Emoji (raw): 🎉 📚 ✅ ⭐ &nbsp; Emoji (entity): &#127881; &#128218;</p>
+<p style="margin:0 0 8px 0;">T6.7 Non-breaking spaces: [&nbsp;] [&#160;] [&nbsp;&nbsp;&nbsp;]</p>
+<p style="margin:0 0 8px 0;">T6.8 Bare ampersand in text: Tom & Jo, Q&A</p>
+<p style="margin:0 0 8px 0;">T6.9 Less-than written as text: 3 &lt; 5 and 5 &gt; 3</p>
+<p style="margin:0 0 8px 0;">T6.10 Merge field styles (which does Synergetic use?):</p>
+<ul style="margin:0 0 8px 0;padding-left:24px;">
+<li>T6.10a {{FirstName}}</li>
+<li>T6.10b [FirstName]</li>
+<li>T6.10c [[FirstName]]</li>
+<li>T6.10d %FirstName%</li>
+<li>T6.10e %%FirstName%%</li>
+<li>T6.10f &laquo;FirstName&raquo;</li>
+<li>T6.10g &lt;&lt;FirstName&gt;&gt;</li>
+<li>T6.10h ${FirstName}</li>
+</ul>
+<p style="margin:0 0 8px 0;">T6.11 A very long word that may need wrapping: Supercalifragilisticexpialidocious-Pneumonoultramicroscopicsilicovolcanoconiosis</p>
+<p style="margin:0 0 8px 0;">T6.12 Tab character between words:	tab	here</p>
+<p style="margin:0;">T6.13 Several    spaces    between    words (should collapse to one)</p>
+</td></tr>
+</table>
+</body>
+</html>

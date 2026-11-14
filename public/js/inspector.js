@@ -64,6 +64,12 @@ const SETTINGS_FIELDS = [
     help: 'The HTML version of the exported email. HTML 4.01 Transitional suits most mailers; XHTML writes self-closing tags (<br />).',
   },
   {
+    key: 'synergetic',
+    label: 'Synergetic compatibility',
+    type: 'checkbox',
+    help: 'Adjusts the HTML for what Synergetic strips or rewrites. In development: it doesn’t change anything yet while we test what Synergetic does.',
+  },
+  {
     key: 'strictXhtml',
     label: 'Strict validation',
     type: 'checkbox',
