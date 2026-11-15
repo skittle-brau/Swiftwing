@@ -126,7 +126,7 @@ TinyMCE is self-hosted from `node_modules`, so it needs no API key or CDN. It ru
   - WebP is converted to JPEG, or to PNG if it has transparency, because Outlook desktop can't display WebP.
   - Animated GIFs keep their animation.
   - Files are checked by their actual content, not the type the browser claims. Only PNG, JPEG, GIF and WebP are accepted.
-- **Media → All projects** shows a folder tree matching the storage layout (year → month → project) with image counts and sizes at each level. Open a project to see, insert or drag its images. Months more than two years old are labelled **Over 2 years**. The image picker has the same tree for browsing other projects.
+- **Media → All projects** shows a folder tree matching the storage layout (year → month → project, e.g. 2026 → 11 → Spring-Gala) with image counts and sizes at each level. Open a project to see, insert or drag its images. Months more than two years old are labelled **Over 2 years**. The image picker has the same tree for browsing other projects.
 - **Purging:** admins can delete a whole project, month or year from the tree. The confirmation shows how many images and how much space will be freed, lists the projects affected and any saved templates that use those images, and for a month or year asks for the folder name (e.g. `2026/11`) to be typed. Empty month and year folders are removed afterwards, and each purge is logged to the service log. Editors can still delete single images.
 - Drag a library image onto the canvas to insert it. Each library image also has buttons to insert it, copy its absolute URL, or delete it.
 

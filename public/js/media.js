@@ -37,9 +37,6 @@ function formatBytes(n) {
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-function monthName(mm) {
-  return new Date(2000, Number(mm) - 1, 1).toLocaleString(undefined, { month: 'long' });
-}
 
 /* ------------------------------------------------------------ thumbnails */
 
@@ -214,12 +211,13 @@ async function renderTree(container, { forPicker = false } = {}) {
     return node;
   };
 
-  const monthNode = (m, year) => {
+  const monthNode = (m) => {
     const old = m.ageMonths >= RETENTION_MONTHS;
     return folder(
       m.path,
-      treeRow(monthName(m.month), `${plural(m.files, 'image')} · ${formatBytes(m.bytes)}`, {
-        title: `${monthName(m.month)} ${year} (${m.path})`,
+      // Numeric months, matching the folder names (2026/11).
+      treeRow(m.month, `${plural(m.files, 'image')} · ${formatBytes(m.bytes)}`, {
+        title: m.path,
         badge: old ? 'Over 2 years' : null,
         onDelete: forPicker ? null : () => confirmPurge(m.path, 'month', redraw),
       }),
@@ -237,7 +235,7 @@ async function renderTree(container, { forPicker = false } = {}) {
           badge: allOld ? 'Over 2 years' : null,
           onDelete: forPicker ? null : () => confirmPurge(y.path, 'year', redraw),
         }),
-        h('div', { class: 'app-tree-children' }, y.months.map((m) => monthNode(m, y.year))),
+        h('div', { class: 'app-tree-children' }, y.months.map(monthNode)),
         { cls: 'app-tree-year' },
       );
     }),
@@ -257,7 +255,7 @@ async function confirmPurge(path, level, after) {
     return;
   }
   const [y, m, p] = path.split('/');
-  const name = level === 'project' ? `the project “${p}” (${monthName(m)} ${y})` : level === 'month' ? `${monthName(m)} ${y}` : `all of ${y}`;
+  const name = level === 'project' ? `the project “${p}” (${y}/${m})` : level === 'month' ? y + '/' + m : `all of ${y}`;
   const typed = level !== 'project';
   const input = typed ? h('input', { class: 'app-input', id: 'purge-confirm', autocomplete: 'off', spellcheck: 'false', placeholder: path }) : null;
   const body = h(
