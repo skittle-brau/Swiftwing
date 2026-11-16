@@ -1,0 +1,45 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Swiftwing test 05: images and links</title>
+</head>
+<body style="margin:0;padding:0;">
+<table width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:600px;">
+<tr><td style="padding:20px 30px;font-family:Arial, Helvetica, sans-serif;font-size:16px;line-height:24px;color:#333333;">
+<p style="margin:0 0 16px 0;"><strong>Swiftwing test 05: images and links</strong></p>
+<p style="margin:0 0 4px 0;">T5.1 Image with width/height attributes, alt, border="0", display:block:</p>
+<img src="https://email.example.org/uploads/test/image-600x300.png" alt="T5.1 alt text" width="540" height="270" border="0" style="display:block;width:540px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;">
+<p style="margin:12px 0 4px 0;">T5.2 Linked image (wrapped in &lt;a target="_blank"&gt;):</p>
+<a href="https://example.org/t52" target="_blank" style="text-decoration:none;"><img src="https://email.example.org/uploads/test/image-200x100.png" alt="T5.2 linked image" width="200" height="100" border="0" style="display:block;border:0;"></a>
+<p style="margin:12px 0 4px 0;">T5.3 Image with align="right" and title attribute:</p>
+<img src="https://email.example.org/uploads/test/image-100x100.png" alt="T5.3" title="T5.3 title" width="100" height="100" align="right" hspace="10" vspace="5" border="0">
+<p style="margin:0 0 4px 0;">T5.4 Relative image path (should probably become absolute):</p>
+<img src="/uploads/test/relative.png" alt="T5.4 relative path" width="100" height="50" border="0">
+<p style="margin:12px 0 4px 0;">T5.5 Inline data: image (tiny red dot):</p>
+<img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAEUlEQVR42mP4z8DwnxjMMHIVAP1JD/G2SGTYAAAAAElFTkSuQmCC" alt="T5.5 data URI" width="16" height="16" border="0">
+<p style="margin:12px 0 4px 0;">T5.6 Image with srcset and loading="lazy" (modern attributes):</p>
+<img src="https://email.example.org/uploads/test/image-200x100.png" srcset="https://email.example.org/uploads/test/image-400x200.png 2x" loading="lazy" alt="T5.6" width="200" height="100" border="0">
+
+<p style="margin:16px 0 8px 0;"><strong>Links</strong></p>
+<p style="margin:0 0 8px 0;">T5.7 <a href="https://example.org/" style="color:#1a5fb4;text-decoration:underline;">plain https link</a></p>
+<p style="margin:0 0 8px 0;">T5.8 <a href="http://example.org/" style="color:#1a5fb4;">plain http link</a></p>
+<p style="margin:0 0 8px 0;">T5.9 <a href="https://example.org/page?utm_source=email&amp;utm_medium=newsletter&amp;id=42" style="color:#1a5fb4;">link with query string and &amp;amp;</a></p>
+<p style="margin:0 0 8px 0;">T5.10 <a href="https://example.org/page?a=1&b=2" style="color:#1a5fb4;">link with a bare &amp; in the URL</a></p>
+<p style="margin:0 0 8px 0;">T5.11 <a href="mailto:office@example.org?subject=Excursion%20forms&amp;body=Hello" style="color:#1a5fb4;">mailto with subject and body</a></p>
+<p style="margin:0 0 8px 0;">T5.12 <a href="tel:+61000000000" style="color:#1a5fb4;">tel: link</a></p>
+<p style="margin:0 0 8px 0;">T5.13 <a href="#t5-anchor" style="color:#1a5fb4;">jump to anchor</a> &rarr; <a name="t5-anchor" id="t5-anchor">anchor target</a></p>
+<p style="margin:0 0 8px 0;">T5.14 <a href="https://example.org/" target="_blank" rel="noopener noreferrer" title="Link title" style="color:#1a5fb4;">target, rel and title attributes</a></p>
+<p style="margin:0 0 8px 0;">T5.15 <a href="https://example.org/" style="color:#c62828;text-decoration:none;font-weight:bold;">styled link: red, bold, no underline</a></p>
+<p style="margin:0 0 8px 0;">T5.16 <a href="javascript:alert(1)" style="color:#1a5fb4;">javascript: link (should be removed or disabled)</a></p>
+<p style="margin:0 0 8px 0;">T5.17 <a href="https://example.org/student/[StudentID]/report" style="color:#1a5fb4;">link containing [StudentID] placeholder</a></p>
+<p style="margin:0 0 8px 0;">T5.18 <a href="https://example.org/?name={{FirstName}}" style="color:#1a5fb4;">link containing {{FirstName}} placeholder</a></p>
+<p style="margin:0 0 8px 0;">T5.19 <a href="https://example.org/a%20b/%C3%A9t%C3%A9" style="color:#1a5fb4;">link with percent-encoded characters</a></p>
+<table cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;"><tr>
+<td align="center" bgcolor="#1a5fb4" style="background-color:#1a5fb4;border-radius:4px;padding:12px 28px;mso-padding-alt:12px 28px;">
+<a href="https://example.org/t520" target="_blank" style="color:#ffffff;text-decoration:none;font-family:Arial, Helvetica, sans-serif;font-size:16px;font-weight:bold;display:inline-block;">T5.20 Table button</a>
+</td></tr></table>
+</td></tr>
+</table>
+</body>
+</html>

@@ -1,0 +1,81 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Swiftwing test 02: layout tables</title>
+</head>
+<body style="margin:0;padding:0;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f4f4" style="background-color:#f4f4f4;">
+<tr><td align="center" valign="top" style="padding:20px 0;">
+<!--[if mso]><table align="center" width="600" cellpadding="0" cellspacing="0" border="0"><tr><td width="600"><![endif]-->
+<table class="t2-container" width="600" cellpadding="0" cellspacing="0" border="0" align="center" bgcolor="#ffffff" style="width:600px;background-color:#ffffff;">
+<tr><td style="padding:20px 30px 0 30px;font-family:Arial, Helvetica, sans-serif;font-size:16px;line-height:24px;color:#333333;"><strong>Swiftwing test 02: layout tables</strong></td></tr>
+
+<!-- T2.1 table attributes: width, cellpadding, cellspacing, border, bgcolor, align -->
+<tr><td style="padding:12px 30px;">
+<table width="540" cellpadding="10" cellspacing="0" border="1" bgcolor="#e8efff" align="center" style="border-collapse:collapse;">
+<tr><td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;">T2.1 Table with width, cellpadding="10", border="1", bgcolor and align attributes.</td></tr>
+</table>
+</td></tr>
+
+<!-- T2.2 td attributes: width, height, align, valign, bgcolor, nowrap -->
+<tr><td style="padding:12px 30px;">
+<table width="540" cellpadding="0" cellspacing="0" border="0">
+<tr>
+<td width="180" height="60" align="left" valign="top" bgcolor="#fde7e7" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;">T2.2a left/top</td>
+<td width="180" height="60" align="center" valign="middle" bgcolor="#e7f6e9" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;">T2.2b center/middle</td>
+<td width="180" height="60" align="right" valign="bottom" bgcolor="#e7eefd" nowrap="nowrap" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;">T2.2c right/bottom</td>
+</tr>
+</table>
+</td></tr>
+
+<!-- T2.3 role attribute (accessibility) and class/id attributes -->
+<tr><td style="padding:12px 30px;">
+<table role="presentation" id="t23-id" class="t23-class" width="540" cellpadding="0" cellspacing="0" border="0">
+<tr><td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;">T2.3 Table with role="presentation", id and class attributes.</td></tr>
+</table>
+</td></tr>
+
+<!-- T2.4 dir="rtl" column swap -->
+<tr><td style="padding:12px 30px;">
+<table width="540" cellpadding="0" cellspacing="0" border="0" dir="rtl">
+<tr>
+<td width="200" dir="ltr" bgcolor="#e7eefd" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;padding:8px;">T2.4 FIRST in code (should appear on the RIGHT)</td>
+<td width="340" dir="ltr" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;padding:8px;">T2.4 SECOND in code (should appear on the LEFT)</td>
+</tr>
+</table>
+</td></tr>
+
+<!-- T2.5 colspan, rowspan, thead/tbody/th, colgroup -->
+<tr><td style="padding:12px 30px;">
+<table width="540" cellpadding="6" cellspacing="0" border="1" style="border-collapse:collapse;">
+<colgroup><col width="270"><col width="270"></colgroup>
+<thead><tr><th colspan="2" bgcolor="#f1f3f6" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;text-align:left;">T2.5 Header spanning two columns (th, colspan, thead)</th></tr></thead>
+<tbody>
+<tr><td rowspan="2" style="font-family:Arial, Helvetica, sans-serif;font-size:14px;">T2.5 rowspan=2</td><td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;">Row 1</td></tr>
+<tr><td style="font-family:Arial, Helvetica, sans-serif;font-size:14px;">Row 2</td></tr>
+</tbody>
+</table>
+</td></tr>
+
+<!-- T2.6 nested tables three deep -->
+<tr><td style="padding:12px 30px;">
+<table width="540" cellpadding="0" cellspacing="0" border="0" bgcolor="#eeeeee"><tr><td style="padding:10px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#dddddd"><tr><td style="padding:10px;">
+<table width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff"><tr><td style="padding:10px;font-family:Arial, Helvetica, sans-serif;font-size:14px;">T2.6 Three nested tables (grey, darker grey, white).</td></tr></table>
+</td></tr></table>
+</td></tr></table>
+</td></tr>
+
+<!-- T2.7 background image attribute on a cell -->
+<tr><td style="padding:12px 30px 24px 30px;">
+<table width="540" cellpadding="0" cellspacing="0" border="0"><tr>
+<td background="https://email.example.org/uploads/test/background.png" bgcolor="#1a3a5c" height="80" valign="middle" style="background-color:#1a3a5c;background-image:url('https://email.example.org/uploads/test/background.png');font-family:Arial, Helvetica, sans-serif;font-size:14px;color:#ffffff;padding:10px;">T2.7 Cell with background= attribute and background-image CSS (navy fallback).</td>
+</tr></table>
+</td></tr>
+</table>
+<!--[if mso]></td></tr></table><![endif]-->
+</td></tr>
+</table>
+</body>
+</html>

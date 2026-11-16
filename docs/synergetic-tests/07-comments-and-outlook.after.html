@@ -1,0 +1,50 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Swiftwing test 07: comments and Outlook conditionals</title>
+</head>
+<body style="margin:0;padding:0;">
+<table width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:600px;">
+<tr><td style="padding:20px 30px;font-family:Arial, Helvetica, sans-serif;font-size:16px;line-height:24px;color:#333333;">
+<p style="margin:0 0 16px 0;"><strong>Swiftwing test 07: comments and Outlook conditionals</strong></p>
+
+<!-- T7.1 plain HTML comment: is this kept in the saved HTML? -->
+<p style="margin:0 0 8px 0;">T7.1 A plain HTML comment is just above this line (check the code).</p>
+
+<!--[if mso]>
+<p style="margin:0 0 8px 0;color:#6a1b9a;">T7.2 You should see this ONLY in Outlook desktop (if mso).</p>
+<![endif]-->
+
+<!--[if !mso]><!-->
+<p style="margin:0 0 8px 0;color:#2e7d32;">T7.3 You should see this everywhere EXCEPT Outlook desktop (if !mso).</p>
+<!--<![endif]-->
+
+<!--[if gte mso 9]>
+<p style="margin:0 0 8px 0;color:#1a5fb4;">T7.4 Outlook 2000 and later only (gte mso 9).</p>
+<![endif]-->
+
+<p style="margin:12px 0 8px 0;">T7.5 Ghost table: two 250px columns side by side in Outlook, wrapping elsewhere:</p>
+<!--[if mso]><table width="540" cellpadding="0" cellspacing="0" border="0"><tr><td width="250" valign="top"><![endif]-->
+<div style="display:inline-block;width:250px;vertical-align:top;background-color:#e8efff;">T7.5a left column</div>
+<!--[if mso]></td><td width="40">&nbsp;</td><td width="250" valign="top"><![endif]-->
+<div style="display:inline-block;width:250px;vertical-align:top;background-color:#e7f6e9;">T7.5b right column</div>
+<!--[if mso]></td></tr></table><![endif]-->
+
+<p style="margin:16px 0 8px 0;">T7.6 VML rounded button for Outlook (bulletproof button):</p>
+<div>
+<!--[if mso]>
+<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="https://example.org/t76" style="height:44px;v-text-anchor:middle;width:220px;" arcsize="10%" strokecolor="#1a5fb4" fillcolor="#1a5fb4">
+<w:anchorlock/>
+<center style="color:#ffffff;font-family:Arial, sans-serif;font-size:16px;font-weight:bold;">T7.6 VML button</center>
+</v:roundrect>
+<![endif]-->
+<!--[if !mso]><!-->
+<a href="https://example.org/t76" style="background-color:#1a5fb4;border-radius:4px;color:#ffffff;display:inline-block;font-family:Arial, sans-serif;font-size:16px;font-weight:bold;line-height:44px;text-align:center;text-decoration:none;width:220px;">T7.6 Button</a>
+<!--<![endif]-->
+</div>
+<p style="margin:16px 0 0 0;">T7.7 End of test.</p>
+</td></tr>
+</table>
+</body>
+</html>
