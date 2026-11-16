@@ -8,6 +8,7 @@
  *   node server/cli.js user unlock <username>
  *   node server/cli.js user remove <username>
  *   node server/cli.js user list
+ *   node server/cli.js backup [--keep=14] [--dir=/path]
  *
  * Passwords are typed at a hidden prompt, or read from stdin when piped
  * (echo 'pw' | node server/cli.js user add jo). The database location comes
@@ -30,7 +31,10 @@ function usage(code = 1) {
   user role <username> admin|editor change role
   user unlock <username>            clear a login lockout
   user remove <username>            delete an account
-  user list                         show accounts`);
+  user list                         show accounts
+  backup [--keep=14] [--dir=PATH]   snapshot the database (safe while running) and
+                                    delete all but the newest --keep backups
+                                    (default folder: backups/ next to the database)`);
   process.exit(code);
 }
 
@@ -71,11 +75,51 @@ function fixOwnership(file) {
   }
 }
 
+/**
+ * Consistent snapshot of the live database with VACUUM INTO (safe while the
+ * app is running, and compacted), then keep only the newest `keep` backups.
+ */
+function backup(file, { dir, keep }) {
+  if (file === ':memory:') throw new AuthError('No database file to back up.');
+  const target = dir ? path.resolve(dir) : path.join(path.dirname(file), 'backups');
+  fs.mkdirSync(target, { recursive: true });
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  const out = path.join(target, `swiftwing-${stamp}.db`);
+  const db = openDatabase(file);
+  try {
+    db.prepare('VACUUM INTO ?').run(out);
+  } finally {
+    db.close();
+  }
+  // Check the copy opens and is intact before pruning older backups.
+  const check = openDatabase(out);
+  try {
+    const ok = check.prepare('PRAGMA integrity_check').get().integrity_check;
+    if (ok !== 'ok') throw new Error(`Backup failed its integrity check: ${ok}`);
+  } finally {
+    check.close();
+  }
+  const all = fs.readdirSync(target).filter((f) => /^swiftwing-\d{4}-\d{2}-\d{2}-\d{6}\.db$/.test(f)).sort();
+  const removed = all.slice(0, Math.max(0, all.length - keep));
+  for (const f of removed) fs.rmSync(path.join(target, f), { force: true });
+  const size = fs.statSync(out).size;
+  console.log(`Backed up ${file} → ${out} (${(size / 1024).toFixed(1)} KB). Keeping ${Math.min(all.length, keep)} backup(s)${removed.length ? `, removed ${removed.length} older` : ''}.`);
+}
+
 const fmt = (ms) => (ms ? new Date(ms).toISOString().replace('T', ' ').slice(0, 16) : 'never');
 
 async function main() {
   const [scope, cmd, name, arg] = process.argv.slice(2).filter((a) => !a.startsWith('--'));
   const flags = new Set(process.argv.slice(2).filter((a) => a.startsWith('--')));
+  const option = (key) => process.argv.slice(2).find((a) => a.startsWith(`--${key}=`))?.split('=').slice(1).join('=');
+
+  if (scope === 'backup') {
+    const keep = Math.max(1, Math.round(Number(option('keep') ?? 14)) || 14);
+    backup(defaultDbPath(ROOT), { dir: option('dir'), keep });
+    return;
+  }
   if (scope !== 'user' || !cmd) usage();
 
   const file = defaultDbPath(ROOT);

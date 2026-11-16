@@ -47,7 +47,33 @@ Optionally pass `PUBLIC_BASE_URL=https://…` to set the public address, and `CA
 | `swiftwing.service` | systemd unit, running as the `swiftwing` user |
 | `/usr/local/bin/swiftwing-user` | Account management command (run as root) |
 
+| `/var/lib/swiftwing/backups/` | Nightly database backups (see below) |
+
 After editing the settings file, run `systemctl restart swiftwing`. Create the first admin with `swiftwing-user add yourname --admin`.
+
+#### Database backups
+
+`swiftwing-backup.timer` snapshots the database every night at **04:00 Perth time (AWST)** into `/var/lib/swiftwing/backups/swiftwing-YYYY-MM-DD-HHMMSS.db` and keeps the newest **14**. It uses SQLite's `VACUUM INTO`, which is safe while Swiftwing is running, and checks each copy's integrity before removing older ones. If the server was off at 04:00, the backup runs when it next starts. Set `BACKUP_TIME` (systemd calendar format) or `BACKUP_KEEP` when running the install script to change this.
+
+The backups cover accounts, groups and templates. Uploaded images are ordinary files under `/var/lib/swiftwing/uploads/`, so include that folder (or the whole LXC) in your Proxmox backups.
+
+```bash
+systemctl list-timers swiftwing-backup      # when the next backup runs
+systemctl start swiftwing-backup            # take a backup now
+journalctl -u swiftwing-backup -n 20        # backup log
+```
+
+To restore, stop Swiftwing, replace the database with a backup, and start it again:
+
+```bash
+systemctl stop swiftwing
+cp /var/lib/swiftwing/backups/swiftwing-2026-11-16-040000.db /var/lib/swiftwing/swiftwing.db
+rm -f /var/lib/swiftwing/swiftwing.db-wal /var/lib/swiftwing/swiftwing.db-shm
+chown swiftwing:swiftwing /var/lib/swiftwing/swiftwing.db
+systemctl start swiftwing
+```
+
+Elsewhere (development, Docker), run `node server/cli.js backup [--keep=14] [--dir=PATH]` from cron or a scheduler.
 
 ### Docker
 

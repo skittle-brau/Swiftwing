@@ -13,6 +13,8 @@
 #   /var/lib/swiftwing/swiftwing.db    accounts, sessions, templates (SQLite)
 #   swiftwing.service                  runs as the "swiftwing" system user
 #   /usr/local/bin/swiftwing-user      account management (run as root)
+#   /var/lib/swiftwing/backups/        nightly database backups (04:00 Perth time, last 14 kept)
+#   swiftwing-backup.timer             runs swiftwing-backup.service each night
 #
 # An install from before the rename (/opt/atelier-email-builder,
 # atelier-email-builder.service, user "atelier") is moved to this layout
@@ -24,6 +26,8 @@
 #   PORT             app port for a new install (default 3000)
 #   REPO_URL         git URL (default: GitHub repo)
 #   BRANCH           git branch for a new install (default: main)
+#   BACKUP_TIME      daily backup time, systemd calendar format (default: 04:00:00 Australia/Perth)
+#   BACKUP_KEEP      number of nightly backups to keep (default: 14)
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/skittle-brau/atelier-email-builder.git}"
@@ -35,6 +39,9 @@ CONF_DIR=/etc/swiftwing
 ENV_FILE="$CONF_DIR/env"
 STATE_DIR=/var/lib/swiftwing
 DATA_DIR="$STATE_DIR/uploads"
+BACKUP_DIR="$STATE_DIR/backups"
+BACKUP_TIME="${BACKUP_TIME:-04:00:00 Australia/Perth}"
+BACKUP_KEEP="${BACKUP_KEEP:-14}"
 USER_TOOL=/usr/local/bin/swiftwing-user
 
 # Names used before the app was renamed from Atelier Email Builder.
@@ -89,7 +96,7 @@ node -v
 
 echo "==> Service user and folders"
 id "$APP_USER" >/dev/null 2>&1 || useradd --system --home-dir "$STATE_DIR" --shell /usr/sbin/nologin "$APP_USER"
-mkdir -p "$DATA_DIR" "$CONF_DIR"
+mkdir -p "$DATA_DIR" "$CONF_DIR" "$BACKUP_DIR"
 chown -R "$APP_USER:$APP_USER" "$STATE_DIR"
 
 echo "==> App code"
@@ -156,6 +163,42 @@ systemctl daemon-reload
 systemctl enable -q "$SERVICE"
 systemctl restart "$SERVICE"
 
+echo "==> Nightly database backup ($BACKUP_TIME, keeping $BACKUP_KEEP)"
+cat > "/etc/systemd/system/$SERVICE-backup.service" <<EOF
+[Unit]
+Description=Swiftwing database backup
+After=$SERVICE.service
+
+[Service]
+Type=oneshot
+User=$APP_USER
+Group=$APP_USER
+WorkingDirectory=$APP_DIR
+EnvironmentFile=$ENV_FILE
+# Name backup files in Perth time.
+Environment=TZ=Australia/Perth
+ExecStart=/usr/bin/node server/cli.js backup --keep=$BACKUP_KEEP --dir=$BACKUP_DIR
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=$STATE_DIR
+EOF
+cat > "/etc/systemd/system/$SERVICE-backup.timer" <<EOF
+[Unit]
+Description=Nightly Swiftwing database backup
+
+[Timer]
+OnCalendar=*-*-* $BACKUP_TIME
+# If the server was off at backup time, run the backup when it next starts.
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+systemctl daemon-reload
+systemctl enable -q --now "$SERVICE-backup.timer"
+
 echo "==> Account tool ($USER_TOOL)"
 cat > "$USER_TOOL" <<EOF
 #!/bin/sh
@@ -188,6 +231,7 @@ echo "==> Checking health"
 for _ in $(seq 1 15); do
   if curl -fsS "http://127.0.0.1:$APP_PORT/api/health" >/dev/null 2>&1; then
     echo "OK: Swiftwing is running on port $APP_PORT"
+    echo "    Database backups: $BACKUP_DIR (daily at $BACKUP_TIME; run one now with: systemctl start $SERVICE-backup)"
     if ! "$USER_TOOL" list 2>/dev/null | grep -qv '^No accounts'; then
       echo "NEXT: create the first admin account with: swiftwing-user add <your-username> --admin"
     fi
