@@ -365,3 +365,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; 
 .app-purge-list { margin: 0; padding-left: 20px; font-size: 13px; color: var(--muted); columns: 2; }
 .app-btn-danger:disabled { opacity: .45; cursor: not-allowed; }
 .app-modal-footer .app-btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.app-inline-form-2 { grid-template-columns: 1fr auto; margin-top: 8px; }
+.app-input-sm { padding: 5px 8px; }
+.app-share-label { font-size: 11px; color: var(--muted); }
+.app-btn-inline { align-self: flex-start; }

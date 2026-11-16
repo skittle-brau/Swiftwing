@@ -12,6 +12,7 @@ import { openDatabase, defaultDbPath } from './lib/db.js';
 import { AuthService } from './lib/auth.js';
 import { authRouter, loadSession, requireLogin, requireAdmin, sameOriginGuard } from './lib/http-auth.js';
 import { TemplateStore, TemplateError } from './lib/templates.js';
+import { GroupStore, GroupError } from './lib/groups.js';
 import { parseVideoUrl, fetchVideoInfo, makeVideoThumbnail, VideoError } from './lib/video.js';
 
 function clampInt(v, min, max, fallback) {
@@ -40,7 +41,8 @@ export function createApp(options = {}) {
 
   const db = options.db || openDatabase(options.dbPath || (options.uploadDir ? ':memory:' : defaultDbPath(ROOT)));
   const auth = new AuthService(db, { ...(options.auth || {}) });
-  const templates = new TemplateStore(db);
+  const groups = new GroupStore(db);
+  const templates = new TemplateStore(db, { groups });
   const fetchImpl = options.fetch || globalThis.fetch;
 
   const app = express();
@@ -74,7 +76,46 @@ export function createApp(options = {}) {
   /* ---------------------------------------------------------------- API */
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
-  app.use('/api', authRouter(auth));
+  app.use(
+    '/api',
+    authRouter(auth, {
+      decorateUser: (u) => ({ ...u, groups: groups.groupsOf(u.id), templates: templates.countByOwner(u.username) }),
+      usersExtra: () => ({ removedOwners: templates.removedOwners() }),
+    }),
+  );
+
+  /* ------------------------------------------------------------- groups */
+
+  app.get('/api/groups', requireAdmin, (_req, res) => res.json({ groups: groups.list() }));
+  app.post('/api/groups', requireAdmin, (req, res, next) => {
+    try {
+      res.status(201).json({ group: groups.create(req.body?.name) });
+    } catch (err) {
+      next(err);
+    }
+  });
+  app.patch('/api/groups/:id', requireAdmin, (req, res, next) => {
+    try {
+      res.json({ group: groups.rename(req.params.id, req.body?.name) });
+    } catch (err) {
+      next(err);
+    }
+  });
+  app.delete('/api/groups/:id', requireAdmin, (req, res, next) => {
+    try {
+      res.json({ deleted: groups.remove(req.params.id) });
+    } catch (err) {
+      next(err);
+    }
+  });
+  app.put('/api/users/:id/groups', requireAdmin, (req, res, next) => {
+    try {
+      if (!auth.getUser(Number(req.params.id))) return res.status(404).json({ error: 'User not found.' });
+      res.json({ groups: groups.setUserGroups(req.params.id, req.body?.groupIds) });
+    } catch (err) {
+      next(err);
+    }
+  });
 
   app.get('/api/config', (req, res) => {
     res.json({ publicBaseUrl: originOf(req), configuredBaseUrl: publicBaseUrl || null, maxImageWidth: imageOptions.maxWidth });
@@ -162,7 +203,18 @@ export function createApp(options = {}) {
 
   /* ---------------------------------------------------------- templates */
 
-  app.get('/api/templates', (req, res) => res.json({ templates: templates.list(req.user) }));
+  app.get('/api/templates', (req, res) => res.json({ templates: templates.list(req.user, { all: req.query.all === '1' }) }));
+
+  /* A person's templates as a .zip (admins), including people whose accounts were removed. */
+  app.get('/api/templates/archive', requireAdmin, (req, res) => {
+    const owner = String(req.query.owner || '').trim();
+    if (!owner) return res.status(400).json({ error: 'Say whose templates to download (owner=…).' });
+    const { zip, count } = templates.archive(owner);
+    if (!count) return res.status(404).json({ error: `${owner} has no templates.` });
+    const safe = owner.replace(/[^\w.@-]+/g, '-');
+    res.set('Content-Disposition', `attachment; filename="swiftwing-templates-${safe}-${new Date().toISOString().slice(0, 10)}.zip"`);
+    res.type('application/zip').send(zip);
+  });
   app.get('/api/templates/:id', (req, res, next) => {
     try {
       res.json({ template: templates.get(req.params.id, req.user) });
@@ -247,7 +299,7 @@ export function createApp(options = {}) {
     if (err.type === 'entity.too.large') return res.status(413).json({ error: 'Request is too large.' });
     const status = err.status || err.statusCode || 500;
     if (status >= 500 && !(err instanceof VideoError)) console.error(err);
-    const expose = status < 500 || err instanceof VideoError || err instanceof TemplateError;
+    const expose = status < 500 || err instanceof VideoError || err instanceof TemplateError || err instanceof GroupError;
     res.status(status).json({ error: expose ? err.message : 'Internal server error.' });
   });
 

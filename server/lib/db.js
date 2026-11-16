@@ -70,6 +70,41 @@ const MIGRATIONS = [
     updated_at  INTEGER NOT NULL
   );
   `,
+  // 2: groups, and global / group / personal templates.
+  // Existing templates were visible to everyone, so they become 'global'.
+  // Template names no longer have to be unique across everyone (only per owner,
+  // checked in code), so the table is rebuilt without the UNIQUE constraint.
+  `
+  CREATE TABLE groups (
+    id         INTEGER PRIMARY KEY,
+    name       TEXT NOT NULL UNIQUE COLLATE NOCASE,
+    created_at INTEGER NOT NULL
+  );
+  CREATE TABLE user_groups (
+    user_id  INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    group_id INTEGER NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, group_id)
+  );
+  CREATE TABLE templates_v2 (
+    id             INTEGER PRIMARY KEY,
+    name           TEXT NOT NULL COLLATE NOCASE,
+    description    TEXT NOT NULL DEFAULT '',
+    doc            TEXT NOT NULL,
+    scope          TEXT NOT NULL DEFAULT 'user' CHECK (scope IN ('global', 'group', 'user')),
+    group_id       INTEGER REFERENCES groups(id) ON DELETE SET NULL,
+    created_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    owner_username TEXT,
+    updated_by     INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    created_at     INTEGER NOT NULL,
+    updated_at     INTEGER NOT NULL
+  );
+  INSERT INTO templates_v2 (id, name, description, doc, scope, created_by, owner_username, updated_by, created_at, updated_at)
+    SELECT t.id, t.name, t.description, t.doc, 'global', t.created_by, u.username, t.updated_by, t.created_at, t.updated_at
+    FROM templates t LEFT JOIN users u ON u.id = t.created_by;
+  DROP TABLE templates;
+  ALTER TABLE templates_v2 RENAME TO templates;
+  CREATE INDEX templates_owner ON templates(owner_username);
+  `,
 ];
 
 /**

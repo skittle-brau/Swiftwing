@@ -47,9 +47,17 @@ export const api = {
   createUser: (data) => send('POST', '/api/users', data),
   updateUser: (id, data) => send('PATCH', `/api/users/${id}`, data),
   deleteUser: (id) => send('DELETE', `/api/users/${id}`),
+  setUserGroups: (id, groupIds) => send('PUT', `/api/users/${id}/groups`, { groupIds }),
+
+  // Groups (admins)
+  listGroups: () => fetch('/api/groups').then(json),
+  createGroup: (name) => send('POST', '/api/groups', { name }),
+  renameGroup: (id, name) => send('PATCH', `/api/groups/${id}`, { name }),
+  deleteGroup: (id) => send('DELETE', `/api/groups/${id}`),
 
   // Templates
-  listTemplates: () => fetch('/api/templates').then(json),
+  listTemplates: (all = false) => fetch(`/api/templates${all ? '?all=1' : ''}`).then(json),
+  templateArchiveUrl: (owner) => `/api/templates/archive?owner=${encodeURIComponent(owner)}`,
   getTemplate: (id) => fetch(`/api/templates/${id}`).then(json),
   createTemplate: (data) => send('POST', '/api/templates', data),
   updateTemplate: (id, data) => send('PUT', `/api/templates/${id}`, data),
