@@ -107,6 +107,15 @@ export class TemplateStore {
     return this.get(r.id, user);
   }
 
+  /** Names of templates whose design refers to images under /uploads/<folder>/. */
+  usingFolder(folder) {
+    const like = `%/uploads/${folder.replace(/[\\%_]/g, (c) => `\\${c}`)}/%`;
+    return this.db
+      .prepare("SELECT name FROM templates WHERE doc LIKE ? ESCAPE '\\' ORDER BY name COLLATE NOCASE")
+      .all(like)
+      .map((r) => r.name);
+  }
+
   remove(id, user) {
     const r = this.row(id);
     if (!this.canEdit(r, user)) throw new TemplateError('Only the person who created this template, or an admin, can delete it.', 403);

@@ -5,12 +5,12 @@ import { fileURLToPath } from 'node:url';
 import multer from 'multer';
 import { exportEmail } from './lib/exporter.js';
 import {
-  createUploader, storeUpload, storeBuffer, listUploads, resolveInside, ensureDir, datedProjectDir, MAX_FILES,
+  createUploader, storeUpload, storeBuffer, listUploads, resolveInside, ensureDir, datedProjectDir, MAX_FILES, uploadTree, folderSummary, deleteFolder, FOLDER_RE,
 } from './lib/uploads.js';
 import { DEFAULT_MAX_WIDTH, DEFAULT_JPEG_QUALITY } from './lib/images.js';
 import { openDatabase, defaultDbPath } from './lib/db.js';
 import { AuthService } from './lib/auth.js';
-import { authRouter, loadSession, requireLogin, sameOriginGuard } from './lib/http-auth.js';
+import { authRouter, loadSession, requireLogin, requireAdmin, sameOriginGuard } from './lib/http-auth.js';
 import { TemplateStore, TemplateError } from './lib/templates.js';
 import { parseVideoUrl, fetchVideoInfo, makeVideoThumbnail, VideoError } from './lib/video.js';
 
@@ -104,7 +104,44 @@ export function createApp(options = {}) {
 
   app.get('/api/uploads', async (req, res, next) => {
     try {
-      res.json({ files: await listUploads(uploadDir, { project: req.query.project || undefined }) });
+      res.json({ files: await listUploads(uploadDir, { project: req.query.project || undefined, folder: req.query.folder || undefined }) });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /* Folder view: years → months → projects. */
+  app.get('/api/uploads/tree', async (_req, res, next) => {
+    try {
+      res.json({ years: await uploadTree(uploadDir, now()) });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /* What deleting a folder would remove, and which templates use its images. */
+  app.get('/api/uploads/folder', async (req, res, next) => {
+    try {
+      const rel = String(req.query.path || '');
+      if (!FOLDER_RE.test(rel)) return res.status(400).json({ error: 'Invalid folder.' });
+      const summary = await folderSummary(uploadDir, rel);
+      if (!summary) return res.status(404).json({ error: 'Folder not found.' });
+      res.json({ ...summary, templates: templates.usingFolder(rel) });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /* Purge a whole project, month or year folder (admins only). `confirm` must repeat the path. */
+  app.delete('/api/uploads/folder', requireAdmin, async (req, res, next) => {
+    try {
+      const rel = String(req.query.path || '');
+      if (!FOLDER_RE.test(rel)) return res.status(400).json({ error: 'Invalid folder.' });
+      if (req.query.confirm !== rel) return res.status(400).json({ error: 'Confirmation does not match the folder.' });
+      const deleted = await deleteFolder(uploadDir, rel);
+      if (!deleted) return res.status(404).json({ error: 'Folder not found.' });
+      console.warn(`[uploads] ${req.user.username} deleted ${rel}/ (${deleted.files} files, ${deleted.bytes} bytes)`);
+      res.json({ deleted });
     } catch (err) {
       next(err);
     }

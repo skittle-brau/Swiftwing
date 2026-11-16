@@ -331,3 +331,37 @@ svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; 
 .app-list-head .app-icon-btn { width: 26px; height: 26px; }
 .app-list-head .app-icon-btn svg { width: 15px; height: 15px; }
 .app-list .app-image-thumb { height: 70px; }
+
+/* ------------------------------------------------------------ media tree */
+.app-tree { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.app-tree-node > summary {
+  display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 4px; border-radius: 6px; cursor: pointer; list-style: none; user-select: none;
+}
+.app-tree-node > summary::-webkit-details-marker { display: none; }
+.app-tree-node > summary::before {
+  content: ""; flex: none; width: 0; height: 0; border-left: 5px solid var(--muted); border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+  transition: transform .12s; margin: 0 3px;
+}
+.app-tree-node[open] > summary::before { transform: rotate(90deg); }
+.app-tree-node > summary:hover { background: var(--panel-2); }
+.app-tree-node > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.app-tree-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.app-tree-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.app-tree-label { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-tree-meta { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+.app-tree-del { width: 24px; height: 24px; flex: none; opacity: 0; }
+.app-tree-del svg { width: 14px; height: 14px; }
+.app-tree-node > summary:hover .app-tree-del, .app-tree-del:focus-visible { opacity: 1; }
+.app-tree-del:hover { color: var(--danger) !important; }
+.app-tree-children { padding-left: 12px; display: flex; flex-direction: column; gap: 2px; }
+.app-tree-year > summary .app-tree-label { font-size: 14px; }
+.app-tree-project > summary .app-tree-label { font-weight: 500; }
+.app-tree-project.is-current > summary { background: var(--accent-soft); }
+.app-tree-project > .app-media-grid { padding: 6px 0 10px 12px; }
+.app-tree-month.is-old > summary .app-tree-label { color: var(--muted); }
+.app-tree .app-badge { flex: none; }
+.app-tree-lg { max-height: 55vh; overflow-y: auto; }
+.app-warn { background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: 6px; padding: 8px 10px; font-size: 13px; }
+.app-purge-list { margin: 0; padding-left: 20px; font-size: 13px; color: var(--muted); columns: 2; }
+.app-btn-danger:disabled { opacity: .45; cursor: not-allowed; }
+.app-modal-footer .app-btn-danger { background: var(--danger); border-color: var(--danger); color: #fff; }
