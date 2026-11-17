@@ -4,7 +4,7 @@
 # reinstalls packages and restarts the service, keeping settings and uploads.
 #
 #   bash install-debian.sh
-#   PUBLIC_BASE_URL=https://email.example.org CADDY_IP=10.50.0.10 bash install-debian.sh
+#   PUBLIC_BASE_URL=https://email.example.org CADDY_IP=192.0.2.10 bash install-debian.sh
 #
 # Layout:
 #   /opt/swiftwing                     app code (git checkout, owned by root)
