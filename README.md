@@ -47,7 +47,33 @@ Optionally pass `PUBLIC_BASE_URL=https://…` to set the public address, and `CA
 | `swiftwing.service` | systemd unit, running as the `swiftwing` user |
 | `/usr/local/bin/swiftwing-user` | Account management command (run as root) |
 
+| `/var/lib/swiftwing/backups/` | Nightly database backups (see below) |
+
 After editing the settings file, run `systemctl restart swiftwing`. Create the first admin with `swiftwing-user add yourname --admin`.
+
+#### Database backups
+
+`swiftwing-backup.timer` snapshots the database every night at **04:00 Perth time (AWST)** into `/var/lib/swiftwing/backups/swiftwing-YYYY-MM-DD-HHMMSS.db` and keeps the newest **14**. It uses SQLite's `VACUUM INTO`, which is safe while Swiftwing is running, and checks each copy's integrity before removing older ones. If the server was off at 04:00, the backup runs when it next starts. Set `BACKUP_TIME` (systemd calendar format) or `BACKUP_KEEP` when running the install script to change this.
+
+The backups cover accounts, groups and templates. Uploaded images are ordinary files under `/var/lib/swiftwing/uploads/`, so include that folder (or the whole LXC) in your Proxmox backups.
+
+```bash
+systemctl list-timers swiftwing-backup      # when the next backup runs
+systemctl start swiftwing-backup            # take a backup now
+journalctl -u swiftwing-backup -n 20        # backup log
+```
+
+To restore, stop Swiftwing, replace the database with a backup, and start it again:
+
+```bash
+systemctl stop swiftwing
+cp /var/lib/swiftwing/backups/swiftwing-2026-11-16-040000.db /var/lib/swiftwing/swiftwing.db
+rm -f /var/lib/swiftwing/swiftwing.db-wal /var/lib/swiftwing/swiftwing.db-shm
+chown swiftwing:swiftwing /var/lib/swiftwing/swiftwing.db
+systemctl start swiftwing
+```
+
+Elsewhere (development, Docker), run `node server/cli.js backup [--keep=14] [--dir=PATH]` from cron or a scheduler.
 
 ### Docker
 
@@ -80,7 +106,22 @@ swiftwing-user remove <username>             swiftwing-user list
 ```
 
 ### Templates
-**Templates ▾** in the top bar lists templates stored on the server and shared by everyone. Pick one to start an email from it. The current project name is kept, so images still upload to this project's folder. The menu also offers a blank email, the starter layout, **Save as new template…**, **Update “…”** (overwrite the template you started from) and **Manage templates…** (rename or delete). Anyone can create templates; only the person who created one, or an admin, can change or delete it.
+**Templates ▾** in the top bar lists the templates you can use, in sections: **My templates**, one section per group you belong to, and **Everyone**. Pick one to start an email from it. The current project name is kept, so images still upload to this project's folder. The menu also offers a blank email, the starter layout, **Save as new template…**, **Update “…”** (overwrite the template you started from) and **Manage templates…**.
+
+| Sharing | Who sees it |
+|---|---|
+| Only me (personal) | the owner |
+| Group: *name* | members of that group |
+| Everyone | all staff |
+
+- New templates are personal unless you choose otherwise when saving. The owner or an admin can change sharing later in **Manage templates…**. You can share with groups you belong to; admins can share with any group.
+- Only a template's owner, or an admin, can rename, update, re-share or delete it. Names only need to be unique per person.
+- Admins can tick **Show every template** in Manage templates to see everyone's, including personal ones.
+- Templates made before sharing levels existed were shared with everyone, so they start as **Everyone**.
+
+**Groups** are managed by admins in **Users**: create, rename or delete a group, and click a user's Groups entry to choose their groups (a person can be in several). Deleting a group turns its templates into personal templates of their owners.
+
+**Removing a user** shows how many templates they own and offers **Download their templates (.zip)**. Shared templates stay available afterwards. Personal ones are kept but only admins can see them, and they stay downloadable under **Templates of removed users** in the Users window. Each template in the .zip is a `.json` file that opens with **File → Open design**, plus `index.json` with names, sharing and dates.
 
 ### Drag-and-drop canvas
 - **Layouts:** Header, 1 Column, 2 Columns (50/50, 33/67, 67/33, stacking on mobile), Footer.
@@ -170,7 +211,9 @@ server/
   lib/db.js           SQLite (node:sqlite) schema and migrations
   lib/auth.js         accounts, scrypt, lockout, rate limit, sessions
   lib/http-auth.js    session cookie, login gate, Origin check, auth/user routes
-  lib/templates.js    shared template storage
+  lib/templates.js    templates: global / group / personal, archives
+  lib/groups.js       staff groups and membership
+  lib/zip.js          minimal .zip writer for template archives
   lib/video.js        YouTube/Vimeo link parsing, thumbnails with play button
 shared/               ES modules used by BOTH the browser and Node
   blocks.js           block catalogue, defaults, inspector schemas, document model
@@ -208,7 +251,9 @@ The editor and the exporter share one renderer, so what you see on the canvas is
 | `GET /api/config` | Effective public base URL |
 | `POST /api/auth/login` · `POST /api/auth/logout` · `GET /api/auth/me` · `POST /api/auth/password` | Session login/logout, current user, change own password |
 | `GET/POST /api/users` · `PATCH/DELETE /api/users/:id` | User management (admins) |
-| `GET/POST /api/templates` · `GET/PUT/DELETE /api/templates/:id` | Shared templates |
+| `GET/POST /api/templates[?all=1]` · `GET/PUT/DELETE /api/templates/:id` | Templates; `scope` = `user` / `group` (+ `groupId`) / `global`. `all=1` lists everything (admins) |
+| `GET /api/templates/archive?owner=username` | A person's templates as a .zip (admins; works after the account is removed) |
+| `GET/POST /api/groups` · `PATCH/DELETE /api/groups/:id` · `PUT /api/users/:id/groups` | Groups and membership (admins) |
 | `POST /api/video` | Body `{ url, project, style }`. Returns the canonical link, title and stored thumbnail |
 
 All `/api` routes except `health`, `auth/status` and `auth/login` need a session cookie.

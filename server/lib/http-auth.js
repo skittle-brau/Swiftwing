@@ -104,14 +104,20 @@ function sendAuthError(err, res, next) {
   res.status(err.status).json({ error: err.message, locked: !!err.locked });
 }
 
-export function authRouter(auth) {
+/**
+ * @param {import('./auth.js').AuthService} auth
+ * @param {{ decorateUser?: (u: object) => object, usersExtra?: () => object }} [hooks]
+ *   decorateUser adds groups / template counts to users in responses;
+ *   usersExtra adds fields to the admin user list (e.g. removed template owners).
+ */
+export function authRouter(auth, { decorateUser = (u) => u, usersExtra = () => ({}) } = {}) {
   const r = express.Router();
 
   r.get('/auth/status', (req, res) => {
-    res.json({ hasUsers: auth.hasUsers(), user: req.user || null });
+    res.json({ hasUsers: auth.hasUsers(), user: req.user ? decorateUser(req.user) : null });
   });
 
-  r.get('/auth/me', (req, res) => res.json({ user: req.user }));
+  r.get('/auth/me', (req, res) => res.json({ user: decorateUser(req.user) }));
 
   r.post('/auth/login', async (req, res, next) => {
     try {
@@ -142,7 +148,7 @@ export function authRouter(auth) {
 
   /* ------------------------------------------------------ user admin */
 
-  r.get('/users', requireAdmin, (_req, res) => res.json({ users: auth.listUsers() }));
+  r.get('/users', requireAdmin, (_req, res) => res.json({ users: auth.listUsers().map(decorateUser), ...usersExtra() }));
 
   r.post('/users', requireAdmin, async (req, res, next) => {
     try {
