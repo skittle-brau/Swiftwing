@@ -30,6 +30,12 @@
 #   BACKUP_KEEP      number of nightly backups to keep (default: 14)
 set -euo pipefail
 
+# Fingerprint of this script as it was when it started. The "App code" step may
+# pull a newer version of it; if so, the newer one is run instead (see below).
+SELF="${BASH_SOURCE[0]:-}"
+SELF_SUM=""
+if [ -n "$SELF" ] && [ -f "$SELF" ]; then SELF_SUM="$(sha256sum "$SELF" | cut -d' ' -f1)"; fi
+
 REPO_URL="${REPO_URL:-https://github.com/skittle-brau/atelier-email-builder.git}"
 BRANCH="${BRANCH:-main}"
 SERVICE=swiftwing
@@ -107,6 +113,17 @@ else
   git clone --branch "$BRANCH" "$REPO_URL" "$APP_DIR"
 fi
 git -C "$APP_DIR" log --oneline -1
+
+# If that pull changed this install script, restart with the new version so its
+# new steps run now rather than on the next update. SWIFTWING_REEXEC stops it
+# looping; earlier steps are safe to repeat.
+NEW_SCRIPT="$APP_DIR/deploy/install-debian.sh"
+if [ -z "${SWIFTWING_REEXEC:-}" ] && [ -f "$NEW_SCRIPT" ] && [ "$(sha256sum "$NEW_SCRIPT" | cut -d' ' -f1)" != "$SELF_SUM" ]; then
+  echo "==> The install script was updated; continuing with the new version"
+  export SWIFTWING_REEXEC=1
+  exec bash "$NEW_SCRIPT" "$@"
+fi
+
 (cd "$APP_DIR" && npm ci --omit=dev --no-audit --no-fund)
 chown -R root:root "$APP_DIR"
 
